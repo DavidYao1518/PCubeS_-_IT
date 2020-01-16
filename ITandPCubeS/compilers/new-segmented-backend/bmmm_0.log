@@ -1,0 +1,40 @@
+Thread Id: 139922231576320
+Thread CPU Id: 0
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 1
+	#times next position is the searched position  (one step advance): 10
+	#times iterator has been put to a new location (container search): 0
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 1
+	#times next position is the searched position  (one step advance): 10
+	#times iterator has been put to a new location (container search): 0
+Thread Id: 139625195816704
+Thread CPU Id: 0
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 1
+	#times next position is the searched position  (one step advance): 10
+	#times iterator has been put to a new location (container search): 0
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 1
+	#times next position is the searched position  (one step advance): 10
+	#times iterator has been put to a new location (container search): 0
+Thread Id: 140092339963648
+Thread CPU Id: 0
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 1
+	#times next position is the searched position  (one step advance): 10
+	#times iterator has been put to a new location (container search): 0
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 1
+	#times next position is the searched position  (one step advance): 10
+	#times iterator has been put to a new location (container search): 0
+Thread Id: 140320351897344
+Thread CPU Id: 0
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 1
+	#times next position is the searched position  (one step advance): 10
+	#times iterator has been put to a new location (container search): 0
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 1
+	#times next position is the searched position  (one step advance): 10
+	#times iterator has been put to a new location (container search): 0

@@ -1,0 +1,16 @@
+Thread Id: 139969968760576
+Thread CPU Id: 1
+Thread Id: 140076555331328
+Thread CPU Id: 1
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 0
+	#times next position is the searched position  (one step advance): 0
+	#times iterator has been put to a new location (container search): 0
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 0
+	#times next position is the searched position  (one step advance): 0
+	#times iterator has been put to a new location (container search): 0
+Iterator Statistics:
+	#times current position is the searched position  (direct return): 0
+	#times next position is the searched position  (one step advance): 0
+	#times iterator has been put to a new location (container search): 0

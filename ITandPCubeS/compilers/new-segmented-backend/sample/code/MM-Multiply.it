@@ -1,0 +1,47 @@
+Program (args) {
+	
+	// create an environment object for the matrix-matrix multiplication task 
+        mmEnv = new TaskEnvironment(name: "Block Matrix-Matrix Multiply")
+	
+	// specify how external input files are associated with the environmental objects
+        bind_input(mmEnv, "a", args.input_file_1)
+        //bind_input(mmEnv, "b", args.input_file_2)
+	
+	// execute the task
+        execute(task: "Block Matrix-Matrix Multiply"; environment: mmEnv; partition: args.k)
+        
+	// specify where the output should be written to
+	bind_output(mmEnv, "b", args.output_file)
+}
+Function test(m){
+	m = m + 10
+	return m
+}
+Task "Block Matrix-Matrix Multiply":
+	Define:
+		a, b: 2d Array of Real double-precision
+	Environment:
+		a: link
+		b: create
+	Initialize:
+		b.dimension1 = a.dimension1
+		b.dimension2 = a.dimension2
+	Stages:
+		// a single computation stage embodying the logic of the matrix-matrix multiplication 
+		hey(w){
+			w = w+10
+		}
+		multiplyMatrices (x, y ) {
+			do { y[i][j] = x[i][j] + 2
+				y[i][j] = test(y[i][j])
+			} for i, j in x
+		}
+	Computation:
+		Space A { 
+			multiplyMatrices( a, b) 
+		}
+	Partition (k):
+		Space A <1d> {
+			b:block_size(k)
+			a:block_size(k)
+		}

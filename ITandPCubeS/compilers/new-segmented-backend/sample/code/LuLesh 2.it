@@ -1,0 +1,160 @@
+Program (args) {         
+       luleshEnv = new TaskEnvironment(name: "LuLesh")
+    bind_input(luleshEnv, "mesh", args.input_mesh)
+        execute(task: "LuLesh"; environment: luleshEnv; 			\
+			initialize:args.iterations; 					\
+			partition: args.a1, args.a2, args.a3, args.b1, args.b2, args.b3, args.pa1, args.pa2, args.pa3, args.pb1, args.pb2, args.pb3)
+}
+
+Class Node:
+	x, y, z: Real double-precision
+	xd, yd, zd: Real double-precision
+	xdd, ydd, zdd: Real double-precision
+	fx, fy, fz: Real double-precision
+
+Class Element:
+	pressure: Real double-precision
+	q: Real double-precision
+    //Intermediate
+    xb, yb, zb: 3d Array of Real double-precision
+    volume: Real double-precision
+
+Task "LuLesh":
+    Define:
+        //Basic
+        mesh: 3d Array of Real double-precision
+        nodes: 3d Array of Node
+        node_size: Integer
+        element_size: Integer
+        elements: 3d Array of Element
+
+        //Scaler
+        stopTime: Real double-precision
+        deltaTime: Real double-precision
+        hgcoef: Real double-precision
+	max_iterations: Integer//Temp
+
+        //Partitions
+        counter_1, counter_2, counter_3: Integer
+
+    Environment:
+        mesh:link
+    Initialize (iterations):
+        node_size = mesh.dimension1.range.max + 1
+        element_size = node_size - 1
+
+        nodes.dimension1.range.min = 0
+        nodes.dimension1.range.max = node_size - 1
+        nodes.dimension2 = nodes.dimension1
+        nodes.dimension3 = nodes.dimension1
+        elements.dimension1.range.min = 0
+        elements.dimension1.range.max = element_size - 1
+        elements.dimension2 = elements.dimension1
+        elements.dimension3 = elements.dimension1
+
+        max_iterations = iterations
+    Stages:
+        calcElemShapeFunctionDerivatives(elements, nodes) {
+            do{
+                fjxxi = 0.125 * ((nodes[i+1][j+1][k+1].x - nodes[i  ][j  ][k  ].x)   \
+                                +(nodes[i+1][j  ][k+1].x - nodes[i  ][j+1][k  ].x)   \
+                                -(nodes[i  ][j+1][k+1].x - nodes[i+1][j  ][k  ].x)   \
+                                -(nodes[i  ][j  ][k+1].x - nodes[i+1][j+1][k  ].x))
+                fjxet = 0.125 * ((nodes[i+1][j+1][k+1].x - nodes[i  ][j  ][k  ].x)   \
+                                -(nodes[i+1][j  ][k+1].x - nodes[i  ][j+1][k  ].x)   \
+                                +(nodes[i  ][j+1][k+1].x - nodes[i+1][j  ][k  ].x)   \
+                                -(nodes[i  ][j  ][k+1].x - nodes[i+1][j+1][k  ].x))
+                fjxze = 0.125 * ((nodes[i+1][j+1][k+1].x - nodes[i  ][j  ][k  ].x)   \
+                                +(nodes[i+1][j  ][k+1].x - nodes[i  ][j+1][k  ].x)   \
+                                +(nodes[i  ][j+1][k+1].x - nodes[i+1][j  ][k  ].x)   \
+                                +(nodes[i  ][j  ][k+1].x - nodes[i+1][j+1][k  ].x))
+                fjyxi = 0.125 * ((nodes[i+1][j+1][k+1].y - nodes[i  ][j  ][k  ].y)   \
+                                +(nodes[i+1][j  ][k+1].y - nodes[i  ][j+1][k  ].y)   \
+                                -(nodes[i  ][j+1][k+1].y - nodes[i+1][j  ][k  ].y)   \
+                                -(nodes[i  ][j  ][k+1].y - nodes[i+1][j+1][k  ].y))
+                fjyet = 0.125 * ((nodes[i+1][j+1][k+1].y - nodes[i  ][j  ][k  ].y)   \
+                                -(nodes[i+1][j  ][k+1].y - nodes[i  ][j+1][k  ].y)   \
+                                +(nodes[i  ][j+1][k+1].y - nodes[i+1][j  ][k  ].y)   \
+                                -(nodes[i  ][j  ][k+1].y - nodes[i+1][j+1][k  ].y))
+                fjyze = 0.125 * ((nodes[i+1][j+1][k+1].y - nodes[i  ][j  ][k  ].y)   \
+                                +(nodes[i+1][j  ][k+1].y - nodes[i  ][j+1][k  ].y)   \
+                                +(nodes[i  ][j+1][k+1].y - nodes[i+1][j  ][k  ].y)   \
+                                +(nodes[i  ][j  ][k+1].y - nodes[i+1][j+1][k  ].y))
+                fjzxi = 0.125 * ((nodes[i+1][j+1][k+1].z - nodes[i  ][j  ][k  ].z)   \
+                                +(nodes[i+1][j  ][k+1].z - nodes[i  ][j+1][k  ].z)   \
+                                -(nodes[i  ][j+1][k+1].z - nodes[i+1][j  ][k  ].z)   \
+                                -(nodes[i  ][j  ][k+1].z - nodes[i+1][j+1][k  ].z))
+                fjzet = 0.125 * ((nodes[i+1][j+1][k+1].z - nodes[i  ][j  ][k  ].z)   \
+                                -(nodes[i+1][j  ][k+1].z - nodes[i  ][j+1][k  ].z)   \
+                                +(nodes[i  ][j+1][k+1].z - nodes[i+1][j  ][k  ].z)   \
+                                -(nodes[i  ][j  ][k+1].z - nodes[i+1][j+1][k  ].z))
+                fjzze = 0.125 * ((nodes[i+1][j+1][k+1].z - nodes[i  ][j  ][k  ].z)   \
+                                +(nodes[i+1][j  ][k+1].z - nodes[i  ][j+1][k  ].z)   \
+                                +(nodes[i  ][j+1][k+1].z - nodes[i+1][j  ][k  ].z)   \
+                                +(nodes[i  ][j  ][k+1].z - nodes[i+1][j+1][k  ].z))
+
+                cjxxi =     (fjyet * fjzze) - (fjzet * fjyze)
+                cjxet = 0 - (fjyxi * fjzze) + (fjzxi * fjyze)
+                cjxze =     (fjyxi * fjzet) - (fjzxi * fjyet)
+
+                cjyxi = 0 - (fjxet * fjzze) + (fjzet * fjxze)
+                cjyet =     (fjxxi * fjzze) - (fjzxi * fjxze)
+                cjyze = 0 - (fjxxi * fjzet) + (fjzxi * fjxet)
+
+                cjzxi =     (fjxet * fjyze) - (fjyet * fjxze)
+                cjzet = 0 - (fjxxi * fjyze) + (fjyxi * fjxze)
+                cjzze =     (fjxxi * fjyet) - (fjyxi * fjxet)
+
+                elements[i][j][k].xb[0][0][0] = 0 -  cjxxi  -  cjxet  -  cjxze
+                elements[i][j][k].xb[1][0][0] =      cjxxi  -  cjxet  -  cjxze
+                elements[i][j][k].xb[1][1][0] =      cjxxi  +  cjxet  -  cjxze
+                elements[i][j][k].xb[0][1][0] = 0  - cjxxi  +  cjxet  -  cjxze
+                elements[i][j][k].xb[0][0][1] = 0 - elements[i][j][k].xb[0][0][0]
+                elements[i][j][k].xb[1][0][1] = 0 - elements[i][j][k].xb[1][0][0]
+                elements[i][j][k].xb[1][1][1] = 0 - elements[i][j][k].xb[1][1][0]
+                elements[i][j][k].xb[0][1][1] = 0 - elements[i][j][k].xb[0][1][0]
+
+                elements[i][j][k].yb[0][0][0] = 0 -  cjyxi  -  cjyet  -  cjyze
+                elements[i][j][k].yb[1][0][0] =      cjyxi  -  cjyet  -  cjyze
+                elements[i][j][k].yb[1][1][0] =      cjyxi  +  cjyet  -  cjyze
+                elements[i][j][k].yb[0][1][0] = 0 -  cjyxi  +  cjyet  -  cjyze
+                elements[i][j][k].yb[0][0][1] = 0 - elements[i][j][k].yb[0][0][0]
+                elements[i][j][k].yb[1][0][1] = 0 - elements[i][j][k].yb[1][0][0]
+                elements[i][j][k].yb[1][1][1] = 0 - elements[i][j][k].yb[1][1][0]
+                elements[i][j][k].yb[0][1][1] = 0 - elements[i][j][k].yb[0][1][0]
+
+                elements[i][j][k].zb[0][0][0] = 0 -  cjzxi  -  cjzet  -  cjzze
+                elements[i][j][k].zb[1][0][0] =      cjzxi  -  cjzet  -  cjzze
+                elements[i][j][k].zb[1][1][0] =      cjzxi  +  cjzet  -  cjzze
+                elements[i][j][k].zb[0][1][0] = 0 -  cjzxi  +  cjzet  -  cjzze
+                elements[i][j][k].zb[0][0][1] = 0 - elements[i][j][k].zb[0][0][0]
+                elements[i][j][k].zb[1][0][1] = 0 - elements[i][j][k].zb[1][0][0]
+                elements[i][j][k].zb[1][1][1] = 0 - elements[i][j][k].zb[1][1][0]
+                elements[i][j][k].zb[0][1][1] = 0 - elements[i][j][k].zb[0][1][0]
+
+                elements[i][j][k].volume = 8 * (fjxet * cjxet + fjyet * cjyet + fjzet * cjzet)
+            }for i, j, k in elements
+        }
+    Computation:
+        Repeat for counter_1 in [1...max_iterations] {
+            Space A {
+                Repeat for counter_2 in [1...(partition.pa1 * partition.pa2 * partition.pa3)] step (partition.pb1 * partition.pb2 * partition.pb3) {
+                    Space B {
+                        Repeat for counter_3 in [1...(partition.pb1 * partition.pb2 * partition.pb3)] {
+                            Epoch {
+                                calcElemShapeFunctionDerivatives(elements, nodes)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    Partition (a1, a2, a3, b1, b2, b3, pa1, pa2, pa3, pb1, pb2, pb3):
+        Space A <3d> {
+            nodes: block_count(a1, a2, a3) padding(pa1, pa2, pa3)
+            elements: block_count(a1, a2, a3) padding(pa1, pa2, pa3)
+	}
+        Space B <3d> divides Space A partitions {
+            nodes: block_count(b1, b2, b3) padding(pb1, pb2, pb3)
+	    elements: block_count(b1, b2, b3) padding(pb1, pb2, pb3)        
+	}	

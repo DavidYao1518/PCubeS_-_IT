@@ -1,0 +1,292 @@
+Program (args) {         
+       luleshEnv = new TaskEnvironment(name: "LuLesh")
+        execute(task: "LuLesh"; environment: luleshEnv; 			\
+			initialize:args.mesh_size, args.iterations; 					\
+			partition: args.p)
+	bind_output(luleshEnv, "output", args.output_file)
+}
+
+Function sumElemFaceNormal(node1, node2, node3, node4, element,			\
+                            x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4  	\
+                          ){
+    bisectX0 = 0.5 * (node4.x + node3.x - node2.x - node1.x)
+    bisectY0 = 0.5 * (node4.y + node3.y - node2.y - node1.y)
+    bisectZ0 = 0.5 * (node4.z + node3.z - node2.z - node1.z)
+    bisectX1 = 0.5 * (node3.x + node2.x - node4.x - node1.x)
+    bisectY1 = 0.5 * (node3.y + node2.y - node4.y - node1.y)
+    bisectZ1 = 0.5 * (node3.z + node2.z - node4.z - node1.z)
+    areaX = 0.25 * (bisectY0 * bisectZ1 - bisectZ0 * bisectY1)
+    areaY = 0.25 * (bisectZ0 * bisectX1 - bisectX0 * bisectZ1)
+    areaZ = 0.25 * (bisectX0 * bisectY1 - bisectY0 * bisectX1)
+
+    element.normalX[x1][y1][z1] = element.normalX[x1][y1][z1] + areaX
+    element.normalX[x2][y2][z2] = element.normalX[x2][y2][z2] + areaX
+    element.normalX[x3][y3][z3] = element.normalX[x3][y3][z3] + areaX
+    element.normalX[x4][y4][z4] = element.normalX[x4][y4][z4] + areaX
+
+    element.normalY[x1][y1][z1] = element.normalY[x1][y1][z1] + areaY
+    element.normalY[x2][y2][z2] = element.normalY[x2][y2][z2] + areaY
+    element.normalY[x3][y3][z3] = element.normalY[x3][y3][z3] + areaY
+    element.normalY[x4][y4][z4] = element.normalY[x4][y4][z4] + areaY
+
+    element.normalZ[x1][y1][z1] = element.normalZ[x1][y1][z1] + areaZ
+    element.normalZ[x2][y2][z2] = element.normalZ[x2][y2][z2] + areaZ
+    element.normalZ[x3][y3][z3] = element.normalZ[x3][y3][z3] + areaZ
+    element.normalZ[x4][y4][z4] = element.normalZ[x4][y4][z4] + areaZ
+    return element
+}
+
+Class Node:
+	x, y, z: Real double-precision
+	xd, yd, zd: Real double-precision
+	xdd, ydd, zdd: Real double-precision
+	fx, fy, fz: Real double-precision
+
+Class Element:
+	p: Real double-precision
+	q: Real double-precision
+    //Intermediate
+    normalX, normalY, normalZ: Array [2][2][2] of Real double-precision
+    volume: Real double-precision
+    sigxx, sigyy, sigzz: Real double-precision
+
+Task "LuLesh":
+    Define:
+        //Basic
+        nodes: 3d Array of Node
+        node_size: Integer
+        element_size: Integer
+        elements: 3d Array of Element
+
+        //Scaler
+        stopTime: Real double-precision
+        deltaTime: Real double-precision
+        hgcoef: Real double-precision
+	max_iterations: Integer//Temp
+
+        //Partitions
+        counter_1, counter_2, counter_3: Integer
+	//output
+	output: 3d Array of Real double-precision
+
+    Environment:
+	output: create
+
+    Initialize(mesh_size, iterations):
+        node_size = mesh_size + 1
+        element_size = node_size - 1
+
+        nodes.dimension1.range.min = 0
+        nodes.dimension1.range.max = node_size - 1
+        nodes.dimension2 = nodes.dimension1
+        nodes.dimension3 = nodes.dimension1
+        elements.dimension1.range.min = 0
+        elements.dimension1.range.max = element_size - 1
+        elements.dimension2 = elements.dimension1
+        elements.dimension3 = elements.dimension1
+
+        max_iterations = iterations
+
+        output.dimension1.range.min = 0
+        output.dimension1.range.max = element_size - 1
+        output.dimension2 = output.dimension1
+        output.dimension3 = output.dimension1
+    Stages:
+        initMesh(nodes, elements){
+            tz = 0
+            do{
+                ty = 0
+                do{
+                    tx = 0
+                    do{
+                        nodes[i][j][k].x = tx
+                        nodes[i][j][k].y = ty
+                        nodes[i][j][k].z = tz
+                        @Extern {
+                            @Language "C++"
+                            @Includes { cstdlib }
+                            ${
+                                tx = 1.125 * (i+1) / element_size
+                            }$
+                        }
+                    }for i in nodes
+                        @Extern {
+                            @Language "C++"
+                            @Includes { cstdlib }
+                            ${
+                                ty = 1.125 * (j+1) / element_size
+                            }$
+                        }
+                }for j in nodes
+                    @Extern {
+                        @Language "C++"
+                        @Includes { cstdlib }
+                        ${
+                            tz = 1.125 * (k+1) / element_size
+                        }$
+                    }
+            }for k in nodes
+            do{
+                nodes[i][j][k].xd = 0
+                nodes[i][j][k].yd = 0
+                nodes[i][j][k].zd = 0
+                nodes[i][j][k].xdd = 0
+                nodes[i][j][k].ydd = 0
+                nodes[i][j][k].zdd = 0
+                nodes[i][j][k].fx = 0
+                nodes[i][j][k].fy = 0
+                nodes[i][j][k].fz = 0
+            }for i, j, k in nodes
+            do{
+                elements[i][j][k].p = 0
+                elements[i][j][k].q = 0
+            }for i, j, k in elements
+        }
+        initStressTermsForElems(elements){
+            do{
+                elements[i][j][k].sigxx = 0 - elements[i][j][k].p - elements[i][j][k].q
+                elements[i][j][k].sigyy = 0 - elements[i][j][k].p - elements[i][j][k].q
+                elements[i][j][k].sigzz = 0 - elements[i][j][k].p - elements[i][j][k].q
+            }for i, j, k in elements
+        }
+        calcElemShapeFunctionDerivatives(elements, nodes) {
+            do{
+                fjxxi = 0.125 * ((nodes[i+1][j+1][k+1].x - nodes[i  ][j  ][k  ].x)   \
+                                +(nodes[i+1][j  ][k+1].x - nodes[i  ][j+1][k  ].x)   \
+                                -(nodes[i  ][j+1][k+1].x - nodes[i+1][j  ][k  ].x)   \
+                                -(nodes[i  ][j  ][k+1].x - nodes[i+1][j+1][k  ].x))
+                fjxet = 0.125 * ((nodes[i+1][j+1][k+1].x - nodes[i  ][j  ][k  ].x)   \
+                                -(nodes[i+1][j  ][k+1].x - nodes[i  ][j+1][k  ].x)   \
+                                +(nodes[i  ][j+1][k+1].x - nodes[i+1][j  ][k  ].x)   \
+                                -(nodes[i  ][j  ][k+1].x - nodes[i+1][j+1][k  ].x))
+                fjxze = 0.125 * ((nodes[i+1][j+1][k+1].x - nodes[i  ][j  ][k  ].x)   \
+                                +(nodes[i+1][j  ][k+1].x - nodes[i  ][j+1][k  ].x)   \
+                                +(nodes[i  ][j+1][k+1].x - nodes[i+1][j  ][k  ].x)   \
+                                +(nodes[i  ][j  ][k+1].x - nodes[i+1][j+1][k  ].x))
+                fjyxi = 0.125 * ((nodes[i+1][j+1][k+1].y - nodes[i  ][j  ][k  ].y)   \
+                                +(nodes[i+1][j  ][k+1].y - nodes[i  ][j+1][k  ].y)   \
+                                -(nodes[i  ][j+1][k+1].y - nodes[i+1][j  ][k  ].y)   \
+                                -(nodes[i  ][j  ][k+1].y - nodes[i+1][j+1][k  ].y))
+                fjyet = 0.125 * ((nodes[i+1][j+1][k+1].y - nodes[i  ][j  ][k  ].y)   \
+                                -(nodes[i+1][j  ][k+1].y - nodes[i  ][j+1][k  ].y)   \
+                                +(nodes[i  ][j+1][k+1].y - nodes[i+1][j  ][k  ].y)   \
+                                -(nodes[i  ][j  ][k+1].y - nodes[i+1][j+1][k  ].y))
+                fjyze = 0.125 * ((nodes[i+1][j+1][k+1].y - nodes[i  ][j  ][k  ].y)   \
+                                +(nodes[i+1][j  ][k+1].y - nodes[i  ][j+1][k  ].y)   \
+                                +(nodes[i  ][j+1][k+1].y - nodes[i+1][j  ][k  ].y)   \
+                                +(nodes[i  ][j  ][k+1].y - nodes[i+1][j+1][k  ].y))
+                fjzxi = 0.125 * ((nodes[i+1][j+1][k+1].z - nodes[i  ][j  ][k  ].z)   \
+                                +(nodes[i+1][j  ][k+1].z - nodes[i  ][j+1][k  ].z)   \
+                                -(nodes[i  ][j+1][k+1].z - nodes[i+1][j  ][k  ].z)   \
+                                -(nodes[i  ][j  ][k+1].z - nodes[i+1][j+1][k  ].z))
+                fjzet = 0.125 * ((nodes[i+1][j+1][k+1].z - nodes[i  ][j  ][k  ].z)   \
+                                -(nodes[i+1][j  ][k+1].z - nodes[i  ][j+1][k  ].z)   \
+                                +(nodes[i  ][j+1][k+1].z - nodes[i+1][j  ][k  ].z)   \
+                                -(nodes[i  ][j  ][k+1].z - nodes[i+1][j+1][k  ].z))
+                fjzze = 0.125 * ((nodes[i+1][j+1][k+1].z - nodes[i  ][j  ][k  ].z)   \
+                                +(nodes[i+1][j  ][k+1].z - nodes[i  ][j+1][k  ].z)   \
+                                +(nodes[i  ][j+1][k+1].z - nodes[i+1][j  ][k  ].z)   \
+                                +(nodes[i  ][j  ][k+1].z - nodes[i+1][j+1][k  ].z))
+
+                cjxxi =     (fjyet * fjzze) - (fjzet * fjyze)
+                cjxet = 0 - (fjyxi * fjzze) + (fjzxi * fjyze)
+                cjxze =     (fjyxi * fjzet) - (fjzxi * fjyet)
+
+                cjyxi = 0 - (fjxet * fjzze) + (fjzet * fjxze)
+                cjyet =     (fjxxi * fjzze) - (fjzxi * fjxze)
+                cjyze = 0 - (fjxxi * fjzet) + (fjzxi * fjxet)
+
+                cjzxi =     (fjxet * fjyze) - (fjyet * fjxze)
+                cjzet = 0 - (fjxxi * fjyze) + (fjyxi * fjxze)
+                cjzze =     (fjxxi * fjyet) - (fjyxi * fjxet)
+
+                elements[i][j][k].normalX[0][0][0] = 0 -  cjxxi  -  cjxet  -  cjxze
+                elements[i][j][k].normalX[1][0][0] =      cjxxi  -  cjxet  -  cjxze
+                elements[i][j][k].normalX[1][1][0] =      cjxxi  +  cjxet  -  cjxze
+                elements[i][j][k].normalX[0][1][0] = 0  - cjxxi  +  cjxet  -  cjxze
+                elements[i][j][k].normalX[0][0][1] = 0 - elements[i][j][k].normalX[0][0][0]
+                elements[i][j][k].normalX[1][0][1] = 0 - elements[i][j][k].normalX[1][0][0]
+                elements[i][j][k].normalX[1][1][1] = 0 - elements[i][j][k].normalX[1][1][0]
+                elements[i][j][k].normalX[0][1][1] = 0 - elements[i][j][k].normalX[0][1][0]
+
+                elements[i][j][k].normalY[0][0][0] = 0 -  cjyxi  -  cjyet  -  cjyze
+                elements[i][j][k].normalY[1][0][0] =      cjyxi  -  cjyet  -  cjyze
+                elements[i][j][k].normalY[1][1][0] =      cjyxi  +  cjyet  -  cjyze
+                elements[i][j][k].normalY[0][1][0] = 0 -  cjyxi  +  cjyet  -  cjyze
+                elements[i][j][k].normalY[0][0][1] = 0 - elements[i][j][k].normalY[0][0][0]
+                elements[i][j][k].normalY[1][0][1] = 0 - elements[i][j][k].normalY[1][0][0]
+                elements[i][j][k].normalY[1][1][1] = 0 - elements[i][j][k].normalY[1][1][0]
+                elements[i][j][k].normalY[0][1][1] = 0 - elements[i][j][k].normalY[0][1][0]
+
+                elements[i][j][k].normalZ[0][0][0] = 0 -  cjzxi  -  cjzet  -  cjzze
+                elements[i][j][k].normalZ[1][0][0] =      cjzxi  -  cjzet  -  cjzze
+                elements[i][j][k].normalZ[1][1][0] =      cjzxi  +  cjzet  -  cjzze
+                elements[i][j][k].normalZ[0][1][0] = 0 -  cjzxi  +  cjzet  -  cjzze
+                elements[i][j][k].normalZ[0][0][1] = 0 - elements[i][j][k].normalZ[0][0][0]
+                elements[i][j][k].normalZ[1][0][1] = 0 - elements[i][j][k].normalZ[1][0][0]
+                elements[i][j][k].normalZ[1][1][1] = 0 - elements[i][j][k].normalZ[1][1][0]
+                elements[i][j][k].normalZ[0][1][1] = 0 - elements[i][j][k].normalZ[0][1][0]
+
+                elements[i][j][k].volume = 8 * (fjxet * cjxet + fjyet * cjyet + fjzet * cjzet)
+                output[i][j][k] = elements[i][j][k].volume
+            }for i, j, k in elements
+        }
+        calcElemNodeNormals(elements, nodes){
+            do{
+                do{
+                    elements[i][j][k].normal[i1][j1][k1].x = 0
+                    elements[i][j][k].normal[i1][j1][k1].y = 0
+                    elements[i][j][k].normal[i1][j1][k1].z = 0
+                }for i1, j1, k1 in normal
+
+
+                //bottom
+                sumElemFaceNormal(nodes[i][j][k], nodes[i+1][j][k], nodes[i+1][j+1][k], nodes[i][j+1][k], elements[i][j][k],    \
+                    0, 1, 1, 0,    \
+                    0, 0, 1, 1,    \
+                    0, 0, 0, 0)
+                sumElemFaceNormal(nodes[i][j][k], nodes[i][j][k+1], nodes[i+1][j][k+1], nodes[i+1][j][k], elements[i][j][k],    \
+                    0, 0, 1, 1,    \
+                    0, 0, 0, 0,    \
+                    0, 1, 1, 0)
+                sumElemFaceNormal(nodes[i+1][j][k], nodes[i+1][j][k+1], nodes[i+1][j+1][k+1], nodes[i+1][j+1][k], elements[i][j][k],    \
+                    1, 1, 1, 1,    \
+                    0, 0, 1, 1,    \
+                    0, 1, 1, 0)
+                sumElemFaceNormal(nodes[i+1][j+1][k], nodes[i+1][j+1][k+1], nodes[i][j+1][k+1], nodes[i][j+1][k], elements[i][j][k],    \
+                    1, 1, 0, 0,    \
+                    1, 1, 1, 1,    \
+                    0, 1, 1, 0)
+                sumElemFaceNormal(nodes[i][j+1][k], nodes[i][j+1][k+1], nodes[i][j][k+1], nodes[i][j][k], elements[i][j][k],    \
+                    0, 0, 0, 0,    \
+                    1, 1, 0, 0,    \
+                    0, 1, 1, 0)
+                sumElemFaceNormal(nodes[i][j][k+1], nodes[i][j+1][k+1], nodes[i+1][j+1][k+1], nodes[i+1][j][k+1], elements[i][j][k],    \
+                    0, 0, 1, 1,    \
+                    0, 1, 1, 0,    \
+                    1, 1, 1, 1)
+            }for i, j, k in elements
+        }
+        sumElemStressesToNodeForces(elements, nodes){
+            do{
+                do{
+                    nodes[i+i1][j+j1][k+k1].fx = nodes[i+i1][j+j1][k+k1].fx - (elements[i][j][k].sigxx * elements[i][j][k].normalX[i1][j1][k1])
+                    nodes[i+i1][j+j1][k+k1].fy = nodes[i+i1][j+j1][k+k1].fy - (elements[i][j][k].sigyy * elements[i][j][k].normalY[i1][j1][k1])
+                    nodes[i+i1][j+j1][k+k1].fz = nodes[i+i1][j+j1][k+k1].fz - (elements[i][j][k].sigzz * elements[i][j][k].normalY[i1][j1][k1])
+                }for i1, j1, k1 in normal
+            }for i, j, k in elements
+        }
+
+    Computation:
+        Space A {
+            Space B {
+                calcElemShapeFunctionDerivatives(elements, nodes)
+            }
+        }
+    Partition (p):
+        Space A <un-partitioned> {
+            nodes, elements, output
+        }
+        Space B <1d> divides Space A partitions {
+            nodes<dim1>, elements<dim1>, output<dim1>: block_count(p)
+        }

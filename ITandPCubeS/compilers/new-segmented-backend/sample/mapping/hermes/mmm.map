@@ -1,0 +1,5 @@
+"Block Matrix-Matrix Multiply" {
+	// syntax LPS ':' PPS
+	//Space Root: 4	// Socket
+	Space A: 5	// Core Pair
+}
