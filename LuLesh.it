@@ -1,0 +1,2673 @@
+//matElemlist(Just a mapping)
+//FABS SQRT
+//Exit
+//Pass-in?
+
+Program (args) {
+    spaceB_padding = 2
+    spaceC_padding = 2
+    
+    luleshEnv = new TaskEnvironment(name: "LuLesh")
+    execute(task: "LuLesh"; environment: luleshEnv;             \
+            initialize:args.mesh_size, args.iterations;                     \
+            partition: args.p, spaceB_padding, spaceC_padding)
+    bind_output(luleshEnv, "output", args.output_file)
+}
+
+Function calcElemShapeFunctionDerivatives(element, node0x, node1x, node2x, node3x, node4x, node5x, node6x, node7x,\
+                                                   node0y, node1y, node2y, node3y, node4y, node5y, node6y, node7y,\
+                                                   node0z, node1z, node2z, node3z, node4z, node5z, node6z, node7z){
+    fjxxi = 0.125 * ((node6x - node0x)   \
+                     +(node5x - node3x)   \
+                     -(node7x - node1x)   \
+                     -(node4x - node2x))
+    fjxet = 0.125 * ((node6x - node0x)   \
+                     -(node5x - node3x)   \
+                     +(node7x - node1x)   \
+                     -(node4x - node2x))
+    fjxze = 0.125 * ((node6x - node0x)   \
+                     +(node5x - node3x)   \
+                     +(node7x - node1x)   \
+                     +(node4x - node2x))
+    fjyxi = 0.125 * ((node6y - node0y)   \
+                     +(node5y - node3y)   \
+                     -(node7y - node1y)   \
+                     -(node4y - node2y))
+    fjyet = 0.125 * ((node6y - node0y)   \
+                     -(node5y - node3y)   \
+                     +(node7y - node1y)   \
+                     -(node4y - node2y))
+    fjyze = 0.125 * ((node6y - node0y)   \
+                     +(node5y - node3y)   \
+                     +(node7y - node1y)   \
+                     +(node4y - node2y))
+    fjzxi = 0.125 * ((node6z - node0z)   \
+                     +(node5z - node3z)   \
+                     -(node7z - node1z)   \
+                     -(node4z - node2z))
+    fjzet = 0.125 * ((node6z - node0z)   \
+                     -(node5z - node3z)   \
+                     +(node7z - node1z)   \
+                     -(node4z - node2z))
+    fjzze = 0.125 * ((node6z - node0z)   \
+                     +(node5z - node3z)   \
+                     +(node7z - node1z)   \
+                     +(node4z - node2z))
+    
+    cjxxi =     (fjyet * fjzze) - (fjzet * fjyze)
+    cjxet = 0 - (fjyxi * fjzze) + (fjzxi * fjyze)
+    cjxze =     (fjyxi * fjzet) - (fjzxi * fjyet)
+    
+    cjyxi = 0 - (fjxet * fjzze) + (fjzet * fjxze)
+    cjyet =     (fjxxi * fjzze) - (fjzxi * fjxze)
+    cjyze = 0 - (fjxxi * fjzet) + (fjzxi * fjxet)
+    
+    cjzxi =     (fjxet * fjyze) - (fjyet * fjxze)
+    cjzet = 0 - (fjxxi * fjyze) + (fjyxi * fjxze)
+    cjzze =     (fjxxi * fjyet) - (fjyxi * fjxet)
+    
+    element.normalX[0][0][0] = 0 -  cjxxi  -  cjxet  -  cjxze
+    element.normalX[1][0][0] =      cjxxi  -  cjxet  -  cjxze
+    element.normalX[1][1][0] =      cjxxi  +  cjxet  -  cjxze
+    element.normalX[0][1][0] = 0  - cjxxi  +  cjxet  -  cjxze
+    element.normalX[0][0][1] = 0 - element.normalX[0][0][0]
+    element.normalX[1][0][1] = 0 - element.normalX[1][0][0]
+    element.normalX[1][1][1] = 0 - element.normalX[1][1][0]
+    element.normalX[0][1][1] = 0 - element.normalX[0][1][0]
+    
+    element.normalY[0][0][0] = 0 -  cjyxi  -  cjyet  -  cjyze
+    element.normalY[1][0][0] =      cjyxi  -  cjyet  -  cjyze
+    element.normalY[1][1][0] =      cjyxi  +  cjyet  -  cjyze
+    element.normalY[0][1][0] = 0 -  cjyxi  +  cjyet  -  cjyze
+    element.normalY[0][0][1] = 0 - element.normalY[0][0][0]
+    element.normalY[1][0][1] = 0 - element.normalY[1][0][0]
+    element.normalY[1][1][1] = 0 - element.normalY[1][1][0]
+    element.normalY[0][1][1] = 0 - element.normalY[0][1][0]
+    
+    element.normalZ[0][0][0] = 0 -  cjzxi  -  cjzet  -  cjzze
+    element.normalZ[1][0][0] =      cjzxi  -  cjzet  -  cjzze
+    element.normalZ[1][1][0] =      cjzxi  +  cjzet  -  cjzze
+    element.normalZ[0][1][0] = 0 -  cjzxi  +  cjzet  -  cjzze
+    element.normalZ[0][0][1] = 0 - element.normalZ[0][0][0]
+    element.normalZ[1][0][1] = 0 - element.normalZ[1][0][0]
+    element.normalZ[1][1][1] = 0 - element.normalZ[1][1][0]
+    element.normalZ[0][1][1] = 0 - element.normalZ[0][1][0]
+    
+    element.determ = 8 * (fjxet * cjxet + fjyet * cjyet + fjzet * cjzet)
+    return element
+}
+
+Function sumElemFaceNormal(node1, node2, node3, node4, element,            \
+                           x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4      \
+                           ){
+    bisectX0 = 0.5 * (node4.x + node3.x - node2.x - node1.x)
+    bisectY0 = 0.5 * (node4.y + node3.y - node2.y - node1.y)
+    bisectZ0 = 0.5 * (node4.z + node3.z - node2.z - node1.z)
+    bisectX1 = 0.5 * (node3.x + node2.x - node4.x - node1.x)
+    bisectY1 = 0.5 * (node3.y + node2.y - node4.y - node1.y)
+    bisectZ1 = 0.5 * (node3.z + node2.z - node4.z - node1.z)
+    areaX = 0.25 * (bisectY0 * bisectZ1 - bisectZ0 * bisectY1)
+    areaY = 0.25 * (bisectZ0 * bisectX1 - bisectX0 * bisectZ1)
+    areaZ = 0.25 * (bisectX0 * bisectY1 - bisectY0 * bisectX1)
+    
+    element.normalX[x1][y1][z1] = element.normalX[x1][y1][z1] + areaX
+    element.normalX[x2][y2][z2] = element.normalX[x2][y2][z2] + areaX
+    element.normalX[x3][y3][z3] = element.normalX[x3][y3][z3] + areaX
+    element.normalX[x4][y4][z4] = element.normalX[x4][y4][z4] + areaX
+    
+    element.normalY[x1][y1][z1] = element.normalY[x1][y1][z1] + areaY
+    element.normalY[x2][y2][z2] = element.normalY[x2][y2][z2] + areaY
+    element.normalY[x3][y3][z3] = element.normalY[x3][y3][z3] + areaY
+    element.normalY[x4][y4][z4] = element.normalY[x4][y4][z4] + areaY
+    
+    element.normalZ[x1][y1][z1] = element.normalZ[x1][y1][z1] + areaZ
+    element.normalZ[x2][y2][z2] = element.normalZ[x2][y2][z2] + areaZ
+    element.normalZ[x3][y3][z3] = element.normalZ[x3][y3][z3] + areaZ
+    element.normalZ[x4][y4][z4] = element.normalZ[x4][y4][z4] + areaZ
+    return element
+}
+
+Function volumeDerivative(node0, node1, node2, node3, node4, node5, ix, iy, iz, element){
+    element.voDerX[ix][iy][iz] = (\
+                                  (node1.y + node2.y) * (node0.z + node1.z) - (node0.y + node1.y) * (node1.z + node2.z) +\
+                                  (node0.y + node4.y) * (node3.z + node4.z) - (node3.y + node4.y) * (node0.z + node4.z) -\
+                                  (node2.y + node5.y) * (node3.z + node5.z) + (node3.y + node5.y) * (node2.z + node5.z))/12.0
+    
+    element.voDerY[ix][iy][iz] = (0 -\
+                                  (node1.x + node2.x) * (node0.z + node1.z) + (node0.x + node1.x) * (node1.z + node2.z) -\
+                                  (node0.x + node4.x) * (node3.z + node4.z) + (node3.x + node4.x) * (node0.z + node4.z) +\
+                                  (node2.x + node5.x) * (node3.z + node5.z) - (node3.x + node5.x) * (node2.z + node5.z))/12.0
+    
+    element.voDerZ[ix][iy][iz] = (0 -\
+                                  (node1.y + node2.y) * (node0.x + node1.x) + (node0.y + node1.y) * (node1.x + node2.x) -\
+                                  (node0.y + node4.y) * (node3.x + node4.x) + (node3.y + node4.y) * (node0.x + node4.x) +\
+                                  (node2.y + node5.y) * (node3.x + node5.x) - (node3.y + node5.y) * (node2.x + node5.x))/12.0
+    return element
+}
+
+Function calcElemVolume(node0, node1, node2, node3, node4, node5, node6, node7){
+    dx61 = node6.x - node1.x
+    dy61 = node6.y - node1.y
+    dz61 = node6.z - node1.z
+    
+    dx70 = node7.x - node0.x
+    dy70 = node7.y - node0.y
+    dz70 = node7.z - node0.z
+    
+    dx63 = node6.x - node3.x
+    dy63 = node6.y - node3.y
+    dz63 = node6.z - node3.z
+    
+    dx20 = node2.x - node0.x
+    dy20 = node2.y - node0.y
+    dz20 = node2.z - node0.z
+    
+    dx50 = node5.x - node0.x
+    dy50 = node5.y - node0.y
+    dz50 = node5.z - node0.z
+    
+    dx64 = node6.x - node4.x
+    dy64 = node6.y - node4.y
+    dz64 = node6.z - node4.z
+    
+    dx31 = node3.x - node1.x
+    dy31 = node3.y - node1.y
+    dz31 = node3.z - node1.z
+    
+    dx72 = node7.x - node2.x
+    dy72 = node7.y - node2.y
+    dz72 = node7.z - node2.z
+    
+    dx43 = node4.x - node3.x
+    dy43 = node4.y - node3.y
+    dz43 = node4.z - node3.z
+    
+    dx57 = node5.x - node7.x
+    dy57 = node5.y - node7.y
+    dz57 = node5.z - node7.z
+    
+    dx14 = node1.x - node4.x
+    dy14 = node1.y - node4.y
+    dz14 = node1.z - node4.z
+    
+    dx25 = node2.x - node5.x
+    dy25 = node2.y - node5.y
+    dz25 = node2.z - node5.z
+    
+    volume = \
+    triple_product(dx31 + dx72, dx63, dx20,\
+                   dy31 + dy72, dy63, dy20,\
+                   dz31 + dz72, dz63, dz20) +\
+    triple_product(dx43 + dx57, dx64, dx70,\
+                   dy43 + dy57, dy64, dy70,\
+                   dz43 + dz57, dz64, dz70) +\
+    triple_product(dx14 + dx25, dx61, dx50,\
+                   dy14 + dy25, dy61, dy50,\
+                   dz14 + dz25, dz61, dz50)
+    volume = volume/12
+    
+    //debug
+    @Extern {
+        @Language "C++"
+        @Includes { cstdlib, math.h }
+        ${
+                printf("volume: %12.12e tp: %12.12e %12.12e %12.12e\n", volume, node1.x, node2.x, node3.x);
+        }$
+    }
+    
+    return volume
+}
+
+Function triple_product(x1, y1, z1, x2, y2, z2, x3, y3, z3){
+    tp = x1*(y2*z3 - z2*y3) + x2*(z1*y3 - y1*z3) + x3*(y1*z2 - z1*y2)
+    return tp
+}
+
+Function areaFace(node0, node1, node2, node3){
+    fx = (node2.x - node0.x) - (node3.x - node1.x)
+    fy = (node2.y - node0.y) - (node3.y - node1.y)
+    fz = (node2.z - node0.z) - (node3.z - node1.z)
+    gx = (node2.x - node0.x) + (node3.x - node1.x)
+    gy = (node2.y - node0.y) + (node3.y - node1.y)
+    gz = (node2.z - node0.z) + (node3.z - node1.z)
+    area =\
+    (fx * fx + fy * fy + fz * fz) *\
+    (gx * gx + gy * gy + gz * gz) -\
+    (fx * gx + fy * gy + fz * gz) *\
+    (fx * gx + fy * gy + fz * gz)
+    return area
+}
+
+Function calcPressureForElems(double_type_init, compression, p_cut, eosvmax, pmin, element){
+    c1s = double_type_init
+    two = 2.0
+    three = 3.0
+    c1s = two / three
+    element.bvc = c1s * (compression + 1)
+    element.pbvc = c1s
+    
+    element.p = element.bvc * element.e_old
+    fabsTmp = element.p
+    fabsVal = double_type_init
+    @Extern {
+        @Language "C++"
+        @Includes { cstdlib, math.h }
+        ${
+            fabsVal = fabs(fabsTmp);
+        }$
+    }
+    if(fabsVal < p_cut){
+        element.p = 0
+    }
+    if (element.vnewc >= eosvmax){
+        element.p = 0
+    }
+    if(element.p < pmin){
+        element.p  = pmin
+    }
+    
+    return element
+}
+
+
+Class Node:
+    x, y, z: Real double-precision
+    xd, yd, zd: Real double-precision
+    xdd, ydd, zdd: Real double-precision
+    fx, fy, fz: Real double-precision
+    mass: Real double-precision
+
+    Class Element:
+    p: Real double-precision
+    q: Real double-precision
+    volo: Real double-precision
+    v: Real double-precision
+    ss: Real double-precision
+    vnew: Real double-precision
+    delv: Real double-precision
+    arealg: Real double-precision
+    mass: Real double-precision
+    dxx: Real double-precision
+    dyy: Real double-precision
+    dzz: Real double-precision
+    vdov: Real double-precision
+    delx_zeta: Real double-precision
+    delv_zeta: Real double-precision
+    delv_xi: Real double-precision
+    delx_eta: Real double-precision
+    delx_xi: Real double-precision
+    delv_eta: Real double-precision
+    qq: Real double-precision
+    ql: Real double-precision
+    e: Real double-precision
+
+//Intermediate
+    normalX, normalY, normalZ: Array [2][2][2] of Real double-precision
+    determ: Real double-precision
+    sigxx, sigyy, sigzz: Real double-precision
+    voDerX, voDerY, voDerZ: Array [2][2][2] of Real double-precision
+    hourgam: Array [4][2][2][2] of Real double-precision
+    bufferX_4: Array [4] of Real double-precision
+    bufferY_4: Array [4] of Real double-precision
+    bufferZ_4: Array [4] of Real double-precision
+    volume: Real double-precision
+    counter: Integer
+    d: Array [6] of Real double-precision
+    vnewc: Real double-precision
+    e_old: Real double-precision
+    p_old: Real double-precision
+    q_old: Real double-precision
+    delvc: Real double-precision
+    compression: Real double-precision
+    compHalfStep: Real double-precision
+    pHalfStep: Real double-precision
+    work: Real double-precision
+    bvc: Real double-precision
+    pbvc: Real double-precision
+
+Class Connectivity:
+    lxim: Array [3] of Integer
+    lxip: Array [3] of Integer
+    letam: Array [3] of Integer
+    letap: Array [3] of Integer
+    lzetam: Array [3] of Integer
+    lzetap: Array [3] of Integer
+
+Class Del:
+    vdov: Real double-precision
+    volo: Real double-precision
+    mass: Real double-precision
+    vnew: Real double-precision
+    delx_zeta: Real double-precision
+    delv_zeta: Real double-precision
+    delv_xi: Real double-precision
+    delx_eta: Real double-precision
+    delx_xi: Real double-precision
+    delv_eta: Real double-precision
+    qq: Real double-precision
+    ql: Real double-precision
+
+Class Time_Constraints:
+    vdov: Real double-precision
+    dtf: Real double-precision
+    dtdvov: Real double-precision
+
+Task "LuLesh":
+    Define:
+        //Basic
+        nodes: 3d Array of Node
+        node_size: Integer
+        element_size: Integer
+        elements: 3d Array of Element
+
+        //Scaler
+        cycle: Integer
+        dtfixed: Real double-precision
+        deltatimemultlb: Real double-precision
+        deltatimemultub: Real double-precision
+        time: Real double-precision
+        dtmax: Real double-precision
+        stopTime: Real double-precision
+        deltaTime: Real double-precision
+        hgcoef: Real double-precision
+        u_cut: Real double-precision
+        qstop: Real double-precision
+        monoq_max_slope: Real double-precision
+        monoq_limiter_mult: Real double-precision
+        qlc_monoq: Real double-precision
+        qqc_monoq: Real double-precision
+        eosvmin: Real double-precision
+        eosvmax: Real double-precision
+        e_cut:  Real double-precision
+        p_cut:  Real double-precision
+        q_cut:  Real double-precision
+        ss4o3:  Real double-precision
+        pmin:  Real double-precision
+        emin:  Real double-precision
+        refdens:  Real double-precision
+        v_cut:  Real double-precision
+        dvovmax: Real double-precision
+        qqc: Real double-precision
+        qqc2: Real double-precision
+        dtcourantT: Real double-precision Reduction
+        dthydroT: Real double-precision Reduction
+        dtcourant: Real double-precision
+        dthydro: Real double-precision
+        connectivities: 3d Array of Connectivity
+        bc: 3d Array of Integer
+        element_flat_index_to_index: 2d Array of Integer
+        node_flat_index_to_index: 2d Array of Integer
+        gamma: 4d Array of Real double-precision
+
+        //output
+        output: 3d Array of Real double-precision
+
+        //temporary
+        counter_222: 3d Array of Real double-precision
+        counter_4: 1d Array of Real double-precision
+        double_type_init: Real double-precision
+        dels: 3d Array of Del
+        t_cs: 3d Array of Time_Constraints
+        t_cmax: Real double-precision
+        max_iterations: Integer//Temp
+
+        iteration_counter: Integer
+        spaceA_counter: Integer
+        spaceB_counter: Integer
+
+    Environment:
+        output: create
+
+    Initialize(mesh_size, iterations):
+        node_size = mesh_size + 1
+        element_size = mesh_size
+        hgcoef = 3
+        cycle = 0
+        dtfixed = 0 - 0.0000001
+        deltatimemultlb = 1.1
+        deltatimemultub = 1.2
+        stopTime = 0.01
+        time = 0
+        deltaTime = 0.0000001
+        dtmax = 0.01
+        u_cut = 0.0000001
+        qstop = 1000000000000
+        monoq_max_slope = 1.0
+        monoq_limiter_mult = 2.0
+        qlc_monoq = 0.5
+        qqc_monoq = 2.0/3.0
+        eosvmax = 1000000000  //1.0e+9
+        eosvmin = 0.000000001 //1.0e-9
+        e_cut = 0.0000001 //1.0e-7
+        p_cut = 0.0000001
+        q_cut = 0.0000001
+        ss4o3 = 4 / 3
+        pmin = 0
+        emin = 0 - 1000000000//000000 //-1.0e+15
+        refdens = 1.0
+        v_cut = 0.000000001 //1.0e-10
+        dvovmax = 0.1
+        qqc = 2.0
+        qqc2 = 64 * qqc * qqc
+        t_cmax = 1000000000//00000000000 //1.0e+20
+        dtcourantT = t_cmax
+        dthydroT = t_cmax
+        dtcourant = t_cmax
+        dthydro = t_cmax
+
+        max_iterations = iterations
+
+        nodes.dimension1.range.min = 0
+        nodes.dimension1.range.max = node_size - 1
+        nodes.dimension2 = nodes.dimension1
+        nodes.dimension3 = nodes.dimension1
+        elements.dimension1.range.min = 0
+        elements.dimension1.range.max = element_size - 1
+        elements.dimension2 = elements.dimension1
+        elements.dimension3 = elements.dimension1
+
+        output.dimension1.range.min = 0
+        output.dimension1.range.max = element_size - 1
+        output.dimension2 = output.dimension1
+        output.dimension3 = output.dimension1
+
+        counter_222.dimension1.range.min = 0
+        counter_222.dimension1.range.max = 1
+        counter_222.dimension2 = counter_222.dimension1
+        counter_222.dimension3 = counter_222.dimension1
+
+        counter_4.dimension1.range.min = 0
+        counter_4.dimension1.range.max = 3
+
+        gamma.dimension1 = counter_4.dimension1
+        gamma.dimension2 = counter_222.dimension1
+        gamma.dimension3 = gamma.dimension2
+        gamma.dimension4 = gamma.dimension2
+
+        element_flat_index_to_index.dimension1.range.min = 0
+        element_flat_index_to_index.dimension1.range.max = element_size * element_size * element_size - 1
+        element_flat_index_to_index.dimension2.range.min = 0
+        element_flat_index_to_index.dimension2.range.max = 2
+        node_flat_index_to_index.dimension1.range.min = 0
+        node_flat_index_to_index.dimension1.range.max = node_size * node_size * node_size - 1
+        node_flat_index_to_index.dimension2.range.min = 0
+        node_flat_index_to_index.dimension2.range.max = 2
+
+        connectivities.dimension1.range.min = 0
+        connectivities.dimension1.range.max = element_size - 1
+        connectivities.dimension2 = connectivities.dimension1
+        connectivities.dimension3 = connectivities.dimension1
+
+        bc.dimension1.range.min = 0
+        bc.dimension1.range.max = element_size - 1
+        bc.dimension2 = bc.dimension1
+        bc.dimension3 = bc.dimension1
+
+        dels.dimension1.range.min = 0
+        dels.dimension1.range.max = element_size - 1
+        dels.dimension2 = dels.dimension1
+        dels.dimension3 = dels.dimension1
+
+        t_cs.dimension1.range.min = 0
+        t_cs.dimension1.range.max = element_size - 1
+        t_cs.dimension2 = t_cs.dimension1
+        t_cs.dimension3 = t_cs.dimension1
+
+        double_type_init = 0
+
+    Stages:
+
+        initElementConnectivityInformation(elements){
+            //Set up element connectivity information
+            connectivities[0][0][0].lxim[0] = 0
+            connectivities[0][0][0].lxim[1] = 0
+            connectivities[0][0][0].lxim[2] = 0
+            rangelxi = [1 ... element_size * element_size * element_size - 1]
+            do in sequence{
+                ti1 = element_flat_index_to_index[i][0]
+                tj1 = element_flat_index_to_index[i][1]
+                tk1 = element_flat_index_to_index[i][2]
+                ti2 = element_flat_index_to_index[i-1][0]
+                tj2 = element_flat_index_to_index[i-1][1]
+                tk2 = element_flat_index_to_index[i-1][2]
+                connectivities[ti1][tj1][tk1].lxim[0] = ti2
+                connectivities[ti1][tj1][tk1].lxim[1] = tj2
+                connectivities[ti1][tj1][tk1].lxim[2] = tk2
+                connectivities[ti2][tj2][tk2].lxip[0] = ti1
+                connectivities[ti2][tj2][tk2].lxip[1] = tj1
+                connectivities[ti2][tj2][tk2].lxip[2] = tk1
+            }for i in rangelxi step 1
+            connectivities[element_size - 1][element_size - 1][element_size - 1].lxip[0] = element_size - 1
+            connectivities[element_size - 1][element_size - 1][element_size - 1].lxip[1] = element_size - 1
+            connectivities[element_size - 1][element_size - 1][element_size - 1].lxip[2] = element_size - 1
+
+            rangeleta = [0 ... element_size - 1]
+            do in sequence{
+                ti1 = element_flat_index_to_index[i][0]
+                tj1 = element_flat_index_to_index[i][1]
+                tk1 = element_flat_index_to_index[i][2]
+                ti2 = element_flat_index_to_index[element_size*element_size*element_size-element_size+i][0]
+                tj2 = element_flat_index_to_index[element_size*element_size*element_size-element_size+i][1]
+                tk2 = element_flat_index_to_index[element_size*element_size*element_size-element_size+i][2]
+                connectivities[ti1][tj1][tk1].letam[0] = ti1
+                connectivities[ti1][tj1][tk1].letam[1] = tj1
+                connectivities[ti1][tj1][tk1].letam[2] = tk1
+                connectivities[ti2][tj2][tk2].letap[0] = ti2
+                connectivities[ti2][tj2][tk2].letap[1] = tj2
+                connectivities[ti2][tj2][tk2].letap[2] = tk2
+            }for i in rangeleta step 1
+            rangeleta = [element_size ... element_size*element_size*element_size - 1]
+            do in sequence{
+                ti1 = element_flat_index_to_index[i][0]
+                tj1 = element_flat_index_to_index[i][1]
+                tk1 = element_flat_index_to_index[i][2]
+                ti2 = element_flat_index_to_index[i - element_size][0]
+                tj2 = element_flat_index_to_index[i - element_size][1]
+                tk2 = element_flat_index_to_index[i - element_size][2]
+                connectivities[ti1][tj1][tk1].letam[0] = ti2
+                connectivities[ti1][tj1][tk1].letam[1] = tj2
+                connectivities[ti1][tj1][tk1].letam[2] = tk2
+                connectivities[ti2][tj2][tk2].letap[0] = ti1
+                connectivities[ti2][tj2][tk2].letap[1] = tj1
+                connectivities[ti2][tj2][tk2].letap[2] = tk1
+            }for i in rangeleta step 1
+            rangelzeta = [0 ... element_size*element_size - 1]
+            do in sequence{
+                ti1 = element_flat_index_to_index[i][0]
+                tj1 = element_flat_index_to_index[i][1]
+                tk1 = element_flat_index_to_index[i][2]
+                ti2 = element_flat_index_to_index[element_size*element_size*element_size-element_size*element_size+i][0]
+                tj2 = element_flat_index_to_index[element_size*element_size*element_size-element_size*element_size+i][1]
+                tk2 = element_flat_index_to_index[element_size*element_size*element_size-element_size*element_size+i][2]
+                connectivities[ti1][tj1][tk1].lzetam[0] = ti1
+                connectivities[ti1][tj1][tk1].lzetam[1] = tj1
+                connectivities[ti1][tj1][tk1].lzetam[2] = tk1
+                connectivities[ti2][tj2][tk2].lzetap[0] = ti2
+                connectivities[ti2][tj2][tk2].lzetap[1] = tj2
+                connectivities[ti2][tj2][tk2].lzetap[2] = tk2
+            }for i in rangelzeta step 1
+            rangelzeta = [element_size*element_size ... element_size*element_size*element_size - 1]
+            do in sequence{
+                ti1 = element_flat_index_to_index[i][0]
+                tj1 = element_flat_index_to_index[i][1]
+                tk1 = element_flat_index_to_index[i][2]
+                ti2 = element_flat_index_to_index[i - element_size*element_size][0]
+                tj2 = element_flat_index_to_index[i - element_size*element_size][1]
+                tk2 = element_flat_index_to_index[i - element_size*element_size][2]
+                connectivities[ti1][tj1][tk1].lzetam[0] = ti2
+                connectivities[ti1][tj1][tk1].lzetam[1] = tj2
+                connectivities[ti1][tj1][tk1].lzetam[2] = tk2
+                connectivities[ti2][tj2][tk2].lzetap[0] = ti1
+                connectivities[ti2][tj2][tk2].lzetap[1] = tj1
+                connectivities[ti2][tj2][tk2].lzetap[2] = tk1
+            }for i in rangelzeta step 1
+        }
+
+        init(node_flat_index_to_index, element_flat_index_to_index){
+            index_range = [0...node_size - 1]
+            do in sequence{
+                do in sequence{
+                    do in sequence{
+                        node_flat_index = i + j * node_size + k * node_size * node_size
+                        node_flat_index_to_index[node_flat_index][0] = i
+                        node_flat_index_to_index[node_flat_index][1] = j
+                        node_flat_index_to_index[node_flat_index][2] = k
+                    }for k in index_range step 1
+                }for j in index_range step 1
+            }for i in index_range step 1
+                
+            index_range = [0...element_size - 1]
+            do in sequence{
+                do in sequence{
+                    do in sequence{
+                        element_flat_index = i + j * element_size + k * element_size * element_size
+                        element_flat_index_to_index[element_flat_index][0] = i
+                        element_flat_index_to_index[element_flat_index][1] = j
+                        element_flat_index_to_index[element_flat_index][2] = k
+                    }for k in index_range step 1
+                }for j in index_range step 1
+            }for i in index_range step 1
+                
+                gamma[0][0][0][0] = 1
+                gamma[0][1][0][0] = 1
+                gamma[0][1][1][0] = -1
+                gamma[0][0][1][0] = -1
+                gamma[0][0][0][1] = -1
+                gamma[0][1][0][1] = -1
+                gamma[0][1][1][1] = 1
+                gamma[0][0][1][1] = 1
+                gamma[1][0][0][0] = 1
+                gamma[1][1][0][0] = -1
+                gamma[1][1][1][0] = -1
+                gamma[1][0][1][0] = 1
+                gamma[1][0][0][1] = -1
+                gamma[1][1][0][1] = 1
+                gamma[1][1][1][1] = 1
+                gamma[1][0][1][1] = -1
+                gamma[2][0][0][0] = 1
+                gamma[2][1][0][0] = -1
+                gamma[2][1][1][0] = 1
+                gamma[2][0][1][0] = -1
+                gamma[2][0][0][1] = 1
+                gamma[2][1][0][1] = -1
+                gamma[2][1][1][1] = 1
+                gamma[2][0][1][1] = -1
+                gamma[3][0][0][0] = -1
+                gamma[3][1][0][0] = 1
+                gamma[3][1][1][0] = -1
+                gamma[3][0][1][0] = 1
+                gamma[3][0][0][1] = 1
+                gamma[3][1][0][1] = -1
+                gamma[3][1][1][1] = 1
+                gamma[3][0][1][1] = -1
+                
+                
+                xi_m_symm = 0
+                xi_p_free = 0
+                eta_m_symm = 0
+                eta_p_free = 0
+                zeta_m_symm = 0
+                zeta_p_free = 0
+                
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib }
+                    ${
+                        #define XI_M_SYMM   0x001
+                        #define XI_M_FREE   0x002
+                        
+                        #define XI_P_SYMM   0x004
+                        #define XI_P_FREE   0x008
+                        
+                        #define ETA_M_SYMM  0x010
+                        #define ETA_M_FREE  0x020
+                        
+                        #define ETA_P_SYMM  0x040
+                        #define ETA_P_FREE  0x080
+                        
+                        #define ZETA_M_SYMM 0x100
+                        #define ZETA_M_FREE 0x200
+                        
+                        #define ZETA_P_SYMM 0x400
+                        #define ZETA_P_FREE 0x800
+                        xi_m_symm = XI_M_SYMM ;
+                        xi_p_free = XI_P_FREE ;
+                        eta_m_symm = ETA_M_SYMM ;
+                        eta_p_free = ETA_P_FREE ;
+                        zeta_m_symm = ZETA_M_SYMM ;
+                        zeta_p_free = ZETA_P_FREE ;
+                    }$
+                }
+            do in sequence{
+                do in sequence{
+                    bc[0][j][k] = bc[0][j][k] | xi_m_symm
+                    bc[element_size-1][j][k] = bc[element_size-1][j][k] | xi_p_free
+                }for k in index_range step 1
+            }for j in index_range step 1
+            do in sequence{
+                do in sequence{
+                    bc[i][0][k] = bc[i][0][k] | eta_m_symm
+                    bc[i][element_size-1][k] = bc[i][element_size-1][k] | eta_p_free
+                }for k in index_range step 1
+            }for i in index_range step 1
+            do in sequence{
+                do in sequence{
+                    bc[i][j][0] = bc[i][j][0] | zeta_m_symm
+                    bc[i][j][element_size-1] = bc[i][j][element_size-1] | zeta_p_free
+                }for j in index_range step 1
+            }for i in index_range step 1
+        }
+
+
+        initMesh(nodes, elements){
+            
+            localNodeXMin = nodes.local.dimension1.range.min
+            localNodeYMin = nodes.local.dimension2.range.min
+            localNodeZMin = nodes.local.dimension3.range.min
+            localElementXMin = elements.local.dimension1.range.min
+            localElementYMin = elements.local.dimension2.range.min
+            localElementZMin = elements.local.dimension3.range.min
+            
+            localNodeXMax = nodes.local.dimension1.range.max
+            localNodeYMax = nodes.local.dimension2.range.max
+            localNodeZMax = nodes.local.dimension3.range.max
+            localElementXMax = elements.local.dimension1.range.max
+            localElementYMax = elements.local.dimension2.range.max
+            localElementZMax = elements.local.dimension3.range.max
+            
+            if(localNodeXMin > localElementXMin){
+                localElementXMin = localNodeXMin
+            }
+            if(localNodeXMax <= localElementXMax){
+                localElementXMax = localNodeXMax - 1
+            }
+            if(localNodeYMin > localElementYMin){
+                localElementYMin = localNodeYMin
+            }
+            if(localNodeYMax <= localElementYMax){
+                localElementYMax = localNodeYMax - 1
+            }
+            if(localNodeZMin > localElementZMin){
+                localElementZMin = localNodeZMin
+            }
+            if(localNodeZMax <= localElementZMax){
+                localElementZMax = localNodeZMax - 1
+            }
+            localNodeXMax = localElementXMax + 1
+            localNodeYMax = localElementYMax + 1
+            localNodeZMax = localElementZMax + 1
+            localNodeXMin = localElementXMin
+            localNodeYMin = localElementYMin
+            localNodeZMin = localElementZMin
+            
+            //Node
+
+            do{
+                ti = double_type_init
+                tj = double_type_init
+                tk = double_type_init
+                element_sizeT = double_type_init
+                element_sizeT = element_size
+                ti = i
+                tj = j
+                tk = k
+                nodes[i][j][k].x = 1.125 * ti / element_sizeT
+                nodes[i][j][k].y = 1.125 * tj / element_sizeT
+                nodes[i][j][k].z = 1.125 * tk / element_sizeT
+                
+                nodes[i][j][k].xd = 0
+                nodes[i][j][k].yd = 0
+                nodes[i][j][k].zd = 0
+                nodes[i][j][k].xdd = 0
+                nodes[i][j][k].ydd = 0
+                nodes[i][j][k].zdd = 0
+                nodes[i][j][k].fx = 0
+                nodes[i][j][k].fy = 0
+                nodes[i][j][k].fz = 0
+                nodes[i][j][k].mass = 0
+            }for i, j, k in nodes\
+                and (i >= localNodeXMin and i <= localNodeXMax )\
+                and (j >= localNodeYMin and j <= localNodeYMax )\
+                and (k >= localNodeZMin and k <= localNodeZMax )
+        
+            //Element
+            if(localElementXMin == 0 && localElementYMin == 0 && localElementZMin == 0){
+                elements[0][0][0].e = 39487460
+            }
+            do{
+                elements[i][j][k].p = 0
+                elements[i][j][k].q = 0
+                elements[i][j][k].volo = calcElemVolume(nodes[i][j][k], nodes[i+1][j][k], nodes[i+1][j+1][k], nodes[i][j+1][k],\
+                                                        nodes[i][j][k+1], nodes[i+1][j][k+1], nodes[i+1][j+1][k+1], nodes[i][j+1][k+1])
+                elements[i][j][k].v = 1
+                elements[i][j][k].ss = 0
+                elements[i][j][k].mass = elements[i][j][k].volo
+                elements[i][j][k].vnew = 0
+                elements[i][j][k].delv = 0
+                elements[i][j][k].arealg = 0
+                elements[i][j][k].delx_zeta = 0
+                
+                do{
+                    counter_222[i1][j1][k1] = 0
+                    nodes[i+i1][j+j1][k+k1].mass = nodes[i+i1][j+j1][k+k1].mass + elements[i][j][k].mass / 8.0
+                }for i1, j1, k1 in counter_222
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+        }
+
+        lagrangeNodal_1(nodes, elements) {
+            localNodeXMin = nodes.local.dimension1.range.min
+            localNodeYMin = nodes.local.dimension2.range.min
+            localNodeZMin = nodes.local.dimension3.range.min
+            localElementXMin = elements.local.dimension1.range.min
+            localElementYMin = elements.local.dimension2.range.min
+            localElementZMin = elements.local.dimension3.range.min
+            
+            localNodeXMax = nodes.local.dimension1.range.max
+            localNodeYMax = nodes.local.dimension2.range.max
+            localNodeZMax = nodes.local.dimension3.range.max
+            localElementXMax = elements.local.dimension1.range.max
+            localElementYMax = elements.local.dimension2.range.max
+            localElementZMax = elements.local.dimension3.range.max
+            
+            if(localNodeXMin > localElementXMin){
+                localElementXMin = localNodeXMin
+            }
+            if(localNodeXMax <= localElementXMax){
+                localElementXMax = localNodeXMax - 1
+            }
+            if(localNodeYMin > localElementYMin){
+                localElementYMin = localNodeYMin
+            }
+            if(localNodeYMax <= localElementYMax){
+                localElementYMax = localNodeYMax - 1
+            }
+            if(localNodeZMin > localElementZMin){
+                localElementZMin = localNodeZMin
+            }
+            if(localNodeZMax <= localElementZMax){
+                localElementZMax = localNodeZMax - 1
+            }
+            localNodeXMax = localElementXMax + 1
+            localNodeYMax = localElementYMax + 1
+            localNodeZMax = localElementZMax + 1
+            localNodeXMin = localElementXMin
+            localNodeYMin = localElementYMin
+            localNodeZMin = localElementZMin
+            
+            //initStressTermsForElems
+            do{
+                elements[i][j][k].sigxx = 0 - elements[i][j][k].p - elements[i][j][k].q
+                elements[i][j][k].sigyy = 0 - elements[i][j][k].p - elements[i][j][k].q
+                elements[i][j][k].sigzz = 0 - elements[i][j][k].p - elements[i][j][k].q
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+                
+            //integrateStressForElems
+            do{
+                //calcElemShapeFunctionDerivatives
+                elements[i][j][k] = calcElemShapeFunctionDerivatives(elements[i][j][k],\
+                                        nodes[i][j][k].x,nodes[i+1][j][k].x,nodes[i+1][j+1][k].x,nodes[i][j+1][k].x,\
+                                        nodes[i][j][k+1].x,nodes[i+1][j][k+1].x,nodes[i+1][j+1][k+1].x,nodes[i][j+1][k+1].x,\
+                                        nodes[i][j][k].y,nodes[i+1][j][k].y,nodes[i+1][j+1][k].y,nodes[i][j+1][k].y,\
+                                        nodes[i][j][k+1].y,nodes[i+1][j][k+1].y,nodes[i+1][j+1][k+1].y,nodes[i][j+1][k+1].y,\
+                                        nodes[i][j][k].z,nodes[i+1][j][k].z,nodes[i+1][j+1][k].z,nodes[i][j+1][k].z,\
+                                        nodes[i][j][k+1].z,nodes[i+1][j][k+1].z,nodes[i+1][j+1][k+1].z,nodes[i][j+1][k+1].z)
+                
+                //calcElemNodeNormals
+                do{
+                    counter_222[i1][j1][k1] = 0
+                    elements[i][j][k].normalX[i1][j1][k1] = 0
+                    elements[i][j][k].normalY[i1][j1][k1] = 0
+                    elements[i][j][k].normalZ[i1][j1][k1] = 0
+                } for i1, j1, k1 in counter_222
+                elements[i][j][k] = sumElemFaceNormal(nodes[i][j][k], nodes[i+1][j][k], nodes[i+1][j+1][k], nodes[i][j+1][k], elements[i][j][k],    \
+                                                      0, 1, 1, 0,    \
+                                                      0, 0, 1, 1,    \
+                                                      0, 0, 0, 0)
+                elements[i][j][k] = sumElemFaceNormal(nodes[i][j][k], nodes[i][j][k+1], nodes[i+1][j][k+1], nodes[i+1][j][k], elements[i][j][k],    \
+                                                      0, 0, 1, 1,    \
+                                                      0, 0, 0, 0,    \
+                                                      0, 1, 1, 0)
+                elements[i][j][k] = sumElemFaceNormal(nodes[i+1][j][k], nodes[i+1][j][k+1], nodes[i+1][j+1][k+1], nodes[i+1][j+1][k], elements[i][j][k],    \
+                                                      1, 1, 1, 1,    \
+                                                      0, 0, 1, 1,    \
+                                                      0, 1, 1, 0)
+                elements[i][j][k] = sumElemFaceNormal(nodes[i+1][j+1][k], nodes[i+1][j+1][k+1], nodes[i][j+1][k+1], nodes[i][j+1][k], elements[i][j][k],    \
+                                                      1, 1, 0, 0,    \
+                                                      1, 1, 1, 1,    \
+                                                      0, 1, 1, 0)
+                elements[i][j][k] = sumElemFaceNormal(nodes[i][j+1][k], nodes[i][j+1][k+1], nodes[i][j][k+1], nodes[i][j][k], elements[i][j][k],    \
+                                                      0, 0, 0, 0,    \
+                                                      1, 1, 0, 0,    \
+                                                      0, 1, 1, 0)
+                elements[i][j][k] = sumElemFaceNormal(nodes[i][j][k+1], nodes[i][j+1][k+1], nodes[i+1][j+1][k+1], nodes[i+1][j][k+1], elements[i][j][k],    \
+                                                      0, 0, 1, 1,    \
+                                                      0, 1, 1, 0,    \
+                                                      1, 1, 1, 1)
+                
+                //sumElemStressesToNodeForces
+                do{
+                    counter_222[i1][j1][k1] = 0
+                    nodes[i+i1][j+j1][k+k1].fx = nodes[i+i1][j+j1][k+k1].fx - (elements[i][j][k].sigxx * elements[i][j][k].normalX[i1][j1][k1])
+                    nodes[i+i1][j+j1][k+k1].fy = nodes[i+i1][j+j1][k+k1].fy - (elements[i][j][k].sigyy * elements[i][j][k].normalY[i1][j1][k1])
+                    nodes[i+i1][j+j1][k+k1].fz = nodes[i+i1][j+j1][k+k1].fz - (elements[i][j][k].sigzz * elements[i][j][k].normalZ[i1][j1][k1])
+                }for i1, j1, k1 in counter_222
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+                                
+            // check for negative element volume
+            //for ( Index_t k=0 ; k<numElem ; ++k ) {
+            //if (determ[k] <= Real_t(0.0)) {
+            //exit(VolumeError) ;
+            //}
+            //}
+                                
+            //calcHourglassControlForElems
+            do{
+                //calcElemVolumeDerivative
+                do{
+                    counter_222[i1][j1][k1] = 0
+                    elements[i][j][k].voDerX[i1][j1][k1] = 0
+                    elements[i][j][k].voDerY[i1][j1][k1] = 0
+                    elements[i][j][k].voDerZ[i1][j1][k1] = 0
+                }for i1, j1, k1 in counter_222
+                    
+                elements[i][j][k] = volumeDerivative(nodes[i+1][j][k],\
+                                                     nodes[i+1][j+1][k],\
+                                                     nodes[i][j+1][k],\
+                                                     nodes[i][j][k+1],\
+                                                     nodes[i+1][j][k+1],\
+                                                     nodes[i][j+1][k+1],\
+                                                     0,0,0,\
+                                                     elements[i][j][k])
+                elements[i][j][k] = volumeDerivative(nodes[i][j][k],\
+                                                     nodes[i+1][j][k],\
+                                                     nodes[i+1][j+1][k],\
+                                                     nodes[i][j+1][k+1],\
+                                                     nodes[i][j][k+1],\
+                                                     nodes[i+1][j+1][k+1],\
+                                                     0,1,0,\
+                                                     elements[i][j][k])
+                elements[i][j][k] = volumeDerivative(nodes[i][j+1][k],\
+                                                     nodes[i][j][k],\
+                                                     nodes[i+1][j][k],\
+                                                     nodes[i+1][j+1][k+1],\
+                                                     nodes[i][j+1][k+1],\
+                                                     nodes[i+1][j][k+1],\
+                                                     1,1,0,\
+                                                     elements[i][j][k])
+                elements[i][j][k] = volumeDerivative(nodes[i+1][j+1][k],\
+                                                     nodes[i][j+1][k],\
+                                                     nodes[i][j][k],\
+                                                     nodes[i+1][j][k+1],\
+                                                     nodes[i+1][j+1][k+1],\
+                                                     nodes[i][j][k+1],\
+                                                     1,0,0,\
+                                                     elements[i][j][k])
+                elements[i][j][k] = volumeDerivative(nodes[i][j+1][k+1],\
+                                                     nodes[i+1][j+1][k+1],\
+                                                     nodes[i+1][j][k+1],\
+                                                     nodes[i][j][k],\
+                                                     nodes[i][j+1][k],\
+                                                     nodes[i+1][j][k],\
+                                                     0,0,1,\
+                                                     elements[i][j][k])
+                elements[i][j][k] = volumeDerivative(nodes[i][j][k+1],\
+                                                     nodes[i][j+1][k+1],\
+                                                     nodes[i+1][j+1][k+1],\
+                                                     nodes[i+1][j][k],\
+                                                     nodes[i][j][k],\
+                                                     nodes[i+1][j+1][k],\
+                                                     1,0,1,\
+                                                     elements[i][j][k])
+                elements[i][j][k] = volumeDerivative(nodes[i+1][j][k+1],\
+                                                     nodes[i][j][k+1],\
+                                                     nodes[i][j+1][k+1],\
+                                                     nodes[i+1][j+1][k],\
+                                                     nodes[i+1][j][k],\
+                                                     nodes[i][j+1][k],\
+                                                     1,1,1,\
+                                                     elements[i][j][k])
+                elements[i][j][k] = volumeDerivative(nodes[i+1][j+1][k+1],\
+                                                     nodes[i+1][j][k+1],\
+                                                     nodes[i][j][k+1],\
+                                                     nodes[i][j+1][k],\
+                                                     nodes[i+1][j+1][k],\
+                                                     nodes[i][j][k],\
+                                                     0,1,1,\
+                                                     elements[i][j][k])
+                
+                elements[i][j][k].determ = elements[i][j][k].volo * elements[i][j][k].v
+                    //if ( mesh.v(i) <= Real_t(0.0) ) {
+                    //    exit(VolumeError) ;
+                    //}
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+                                            
+            //calcFBHourglassForceForElems
+            if(hgcoef > 0){
+                do{
+                    volinv = 1/elements[i][j][k].determ
+                    
+                    hourmodx = double_type_init
+                    hourmody = double_type_init
+                    hourmodz = double_type_init
+                    do{
+                        do{
+                            counter_222[i2][j2][k2] = 0
+                            hourmodx = hourmodx + nodes[i+i2][j+j2][k+k2].x * gamma[i1][i2][j2][k2]
+                            hourmody = hourmody + nodes[i+i2][j+j2][k+k2].y * gamma[i1][i2][j2][k2]
+                            hourmodz = hourmodz + nodes[i+i2][j+j2][k+k2].z * gamma[i1][i2][j2][k2]
+                        }for i2, j2, k2 in counter_222
+                            
+                        do{
+                            counter_222[i2][j2][k2] = 0
+                            elements[i][j][k].hourgam[i1][i2][j2][k2] = gamma[i1][i2][j2][k2] - volinv *\
+                            (elements[i][j][k].voDerX[i2][j2][k2] * hourmodx +\
+                             elements[i][j][k].voDerY[i2][j2][k2] * hourmody +\
+                             elements[i][j][k].voDerZ[i2][j2][k2] * hourmodz)
+                        }for i2, j2, k2 in counter_222
+                    }for i1 in gamma
+                                                                    
+                    temp_determ = elements[i][j][k].determ
+                    volume13 = double_type_init
+                    @Extern {
+                        @Language "C++"
+                        @Includes { cstdlib, math.h }
+                        ${
+                            volume13 = cbrt(temp_determ);
+                        }$
+                    }
+                    coefficient = 0 - hgcoef * 0.01 * elements[i][j][k].ss * elements[i][j][k].mass / volume13
+                                                    
+                    //calcElemFBHourglassForce
+                    do{
+                        elements[i][j][k].bufferX_4[i1] = 0
+                        elements[i][j][k].bufferY_4[i1] = 0
+                        elements[i][j][k].bufferZ_4[i1] = 0
+                        do{
+                            counter_222[i2][j2][k2] = 0
+                            counter_4[i1] = 0
+                            
+                            elements[i][j][k].bufferX_4[i1] = elements[i][j][k].bufferX_4[i1] +\
+                                elements[i][j][k].hourgam[i1][i2][j2][k2] * nodes[i+i2][j+j2][k+k2].xd
+                            elements[i][j][k].bufferY_4[i1] = elements[i][j][k].bufferY_4[i1] +\
+                                elements[i][j][k].hourgam[i1][i2][j2][k2] * nodes[i+i2][j+j2][k+k2].yd
+                            elements[i][j][k].bufferZ_4[i1] = elements[i][j][k].bufferZ_4[i1] +\
+                                elements[i][j][k].hourgam[i1][i2][j2][k2] * nodes[i+i2][j+j2][k+k2].zd
+                        }for i2, j2, k2 in counter_222
+                    }for i1 in counter_4
+                        
+                    do{
+                        do{
+                            counter_222[i1][j1][k1] = 0
+                            counter_4[i2] = 0
+                            
+                            nodes[i+i1][j+j1][k+k1].fx = nodes[i+i1][j+j1][k+k1].fx +\
+                            coefficient * elements[i][j][k].hourgam[i2][i1][j1][k1] * elements[i][j][k].bufferX_4[i2]
+                            nodes[i+i1][j+j1][k+k1].fy = nodes[i+i1][j+j1][k+k1].fy +\
+                            coefficient * elements[i][j][k].hourgam[i2][i1][j1][k1] * elements[i][j][k].bufferY_4[i2]
+                            nodes[i+i1][j+j1][k+k1].fz = nodes[i+i1][j+j1][k+k1].fz +\
+                            coefficient * elements[i][j][k].hourgam[i2][i1][j1][k1] * elements[i][j][k].bufferZ_4[i2]
+                            
+                        }for i2 in counter_4
+                    }for i1, j1, k1 in counter_222
+                                                                            
+                }for i,j,k in elements\
+                    and (i >= localElementXMin and i <= localElementXMax )\
+                    and (j >= localElementYMin and j <= localElementYMax )\
+                    and (k >= localElementZMin and k <= localElementZMax )
+                    
+            }
+        }
+
+        lagrangeNodal_2(nodes){
+            localNodeXMin = nodes.local.dimension1.range.min
+            localNodeYMin = nodes.local.dimension2.range.min
+            localNodeZMin = nodes.local.dimension3.range.min
+            
+            localNodeXMax = nodes.local.dimension1.range.max
+            localNodeYMax = nodes.local.dimension2.range.max
+            localNodeZMax = nodes.local.dimension3.range.max
+            
+            //calcAccelerationForNodes
+            do{
+                nodes[i][j][k].xdd = nodes[i][j][k].fx / nodes[i][j][k].mass
+                nodes[i][j][k].ydd = nodes[i][j][k].fy / nodes[i][j][k].mass
+                nodes[i][j][k].zdd = nodes[i][j][k].fz / nodes[i][j][k].mass
+            }for i, j, k in nodes\
+                and (i >= localNodeXMin and i <= localNodeXMax )\
+                and (j >= localNodeYMin and j <= localNodeYMax )\
+                and (k >= localNodeZMin and k <= localNodeZMax )
+                //applyAccelerationBoundaryConditionsForNodes
+            if(localNodeXMin == 0){
+                do{
+                    nodes[0][j][k].xdd = 0
+                }for j, k in nodes\
+                    and (j >= localNodeYMin and j <= localNodeYMax )\
+                    and (k >= localNodeZMin and k <= localNodeZMax )
+            }
+            if(localNodeYMin == 0){
+                do{
+                    nodes[i][0][k].ydd = 0
+                }for i, k in nodes\
+                    and (i >= localNodeXMin and i <= localNodeXMax )\
+                    and (k >= localNodeZMin and k <= localNodeZMax )
+            }
+            if(localNodeZMin == 0){
+                do{
+                    nodes[i][j][0].zdd = 0
+                }for i, j in nodes\
+                    and (i >= localNodeXMin and i <= localNodeXMax )\
+                    and (j >= localNodeYMin and j <= localNodeYMax )
+            }
+            //calcVelocityForNodes
+            do{
+                oldxd = nodes[i][j][k].xd
+                xddT = nodes[i][j][k].xdd
+                dt = deltaTime
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        printf("old xd: %12.12e xdd: %12.12e dt: %12.12e \n", oldxd, xddT, dt);
+                    }$
+                }
+                
+                xdtmp = nodes[i][j][k].xd + nodes[i][j][k].xdd * deltaTime
+                ydtmp = nodes[i][j][k].yd + nodes[i][j][k].ydd * deltaTime
+                zdtmp = nodes[i][j][k].zd + nodes[i][j][k].zdd * deltaTime
+                xdtmptmp = double_type_init
+                ydtmptmp = double_type_init
+                zdtmptmp = double_type_init
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        xdtmptmp = fabs(xdtmp);
+                        ydtmptmp = fabs(ydtmp);
+                        zdtmptmp = fabs(zdtmp);
+                    }$
+                }
+                if(xdtmptmp < u_cut){
+                    xdtmp = 0
+                }
+                if(ydtmptmp < u_cut){
+                    ydtmp = 0
+                }
+                if(zdtmptmp < u_cut){
+                    zdtmp = 0
+                }
+                nodes[i][j][k].xd = xdtmp
+                nodes[i][j][k].yd = ydtmp
+                nodes[i][j][k].zd = zdtmp
+            }for i, j, k in nodes\
+                and (i >= localNodeXMin and i <= localNodeXMax )\
+                and (j >= localNodeYMin and j <= localNodeYMax )\
+                and (k >= localNodeZMin and k <= localNodeZMax )
+            //calcPositionsForNodes
+            do{
+                nodes[i][j][k].x = nodes[i][j][k].x + nodes[i][j][k].xd * deltaTime
+                nodes[i][j][k].y = nodes[i][j][k].y + nodes[i][j][k].yd * deltaTime
+                nodes[i][j][k].z = nodes[i][j][k].z + nodes[i][j][k].zd * deltaTime
+            }for i, j, k in nodes\
+                and (i >= localNodeXMin and i <= localNodeXMax )\
+                and (j >= localNodeYMin and j <= localNodeYMax )\
+                and (k >= localNodeZMin and k <= localNodeZMax )
+        }
+
+
+        lagrangeElements_1(nodes, elements){
+            localNodeXMin = nodes.local.dimension1.range.min
+            localNodeYMin = nodes.local.dimension2.range.min
+            localNodeZMin = nodes.local.dimension3.range.min
+            localElementXMin = elements.local.dimension1.range.min
+            localElementYMin = elements.local.dimension2.range.min
+            localElementZMin = elements.local.dimension3.range.min
+            
+            localNodeXMax = nodes.local.dimension1.range.max
+            localNodeYMax = nodes.local.dimension2.range.max
+            localNodeZMax = nodes.local.dimension3.range.max
+            localElementXMax = elements.local.dimension1.range.max
+            localElementYMax = elements.local.dimension2.range.max
+            localElementZMax = elements.local.dimension3.range.max
+            
+            if(localNodeXMin > localElementXMin){
+                localElementXMin = localNodeXMin
+            }
+            if(localNodeXMax <= localElementXMax){
+                localElementXMax = localNodeXMax - 1
+            }
+            if(localNodeYMin > localElementYMin){
+                localElementYMin = localNodeYMin
+            }
+            if(localNodeYMax <= localElementYMax){
+                localElementYMax = localNodeYMax - 1
+            }
+            if(localNodeZMin > localElementZMin){
+                localElementZMin = localNodeZMin
+            }
+            if(localNodeZMax <= localElementZMax){
+                localElementZMax = localNodeZMax - 1
+            }
+            localNodeXMax = localElementXMax + 1
+            localNodeYMax = localElementYMax + 1
+            localNodeZMax = localElementZMax + 1
+            localNodeXMin = localElementXMin
+            localNodeYMin = localElementYMin
+            localNodeZMin = localElementZMin
+            //calcLagrangeElements
+            //calcKinematicsForElems
+            do{
+                elements[i][j][k].volume = calcElemVolume(nodes[i][j][k], nodes[i+1][j][k], nodes[i+1][j+1][k], nodes[i][j+1][k],\
+                                                          nodes[i][j][k+1], nodes[i+1][j][k+1], nodes[i+1][j+1][k+1], nodes[i][j+1][k+1])
+                
+                temp1 = elements[i][j][k].volume / elements[i][j][k].volo
+                temp2 = elements[i][j][k].volo
+                temp3 = elements[i][j][k].volume
+                
+                
+                //debug
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        if(temp3 != temp2)
+                         cout << "vol/volo" << temp1 << " " << temp3 << " " << temp2 << endl;
+                    }$
+                }
+                
+                
+                
+                
+                elements[i][j][k].vnew = elements[i][j][k].volume / elements[i][j][k].volo
+                elements[i][j][k].delv = elements[i][j][k].volume / elements[i][j][k].volo - elements[i][j][k].v
+                
+                //calcElemCharacteristicLength
+                charLength = double_type_init
+                a = double_type_init
+                volume = elements[i][j][k].volume
+                
+                a = areaFace(nodes[i][j][k], nodes[i+1][j][k], nodes[i+1][j+1][k], nodes[i][j+1][k])
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        charLength = max(a, charLength);
+                    }$
+                }
+                a = areaFace(nodes[i][j][k+1], nodes[i+1][j][k+1], nodes[i+1][j+1][k+1], nodes[i][j+1][k+1])
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        charLength = max(a, charLength);
+                    }$
+                }
+                a = areaFace(nodes[i][j][k], nodes[i+1][j][k], nodes[i+1][j][k+1], nodes[i][j][k+1])
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        charLength = max(a, charLength);
+                    }$
+                }
+                a = areaFace(nodes[i+1][j][k], nodes[i+1][j+1][k], nodes[i+1][j+1][k+1], nodes[i+1][j][k+1])
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        charLength = max(a, charLength);
+                    }$
+                }
+                a = areaFace(nodes[i+1][j+1][k], nodes[i][j+1][k], nodes[i][j+1][k+1], nodes[i+1][j+1][k+1])
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        charLength = max(a, charLength);
+                    }$
+                }
+                a = areaFace(nodes[i][j+1][k], nodes[i][j][k], nodes[i][j][k+1], nodes[i][j+1][k+1])
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        charLength = max(a, charLength);
+                        charLength = 4 * volume / sqrt(charLength);
+                    }$
+                }
+                elements[i][j][k].arealg = charLength
+                
+                dt2 = deltaTime * 0.5
+                node1x = nodes[i+1][j][k].x - dt2 * nodes[i+1][j][k].xd
+                node1y = nodes[i+1][j][k].y - dt2 * nodes[i+1][j][k].yd
+                node1z = nodes[i+1][j][k].z - dt2 * nodes[i+1][j][k].zd
+                node2x = nodes[i+1][j+1][k].x - dt2 * nodes[i+1][j+1][k].xd
+                node2y = nodes[i+1][j+1][k].y - dt2 * nodes[i+1][j+1][k].yd
+                node2z = nodes[i+1][j+1][k].z - dt2 * nodes[i+1][j+1][k].zd
+                node3x = nodes[i][j+1][k].x - dt2 * nodes[i][j+1][k].xd
+                node3y = nodes[i][j+1][k].y - dt2 * nodes[i][j+1][k].yd
+                node3z = nodes[i][j+1][k].z - dt2 * nodes[i][j+1][k].zd
+                node4x = nodes[i][j][k+1].x - dt2 * nodes[i][j][k+1].xd
+                node4y = nodes[i][j][k+1].y - dt2 * nodes[i][j][k+1].yd
+                node4z = nodes[i][j][k+1].z - dt2 * nodes[i][j][k+1].zd
+                node5x = nodes[i+1][j][k+1].x - dt2 * nodes[i+1][j][k+1].xd
+                node5y = nodes[i+1][j][k+1].y - dt2 * nodes[i+1][j][k+1].yd
+                node5z = nodes[i+1][j][k+1].z - dt2 * nodes[i+1][j][k+1].zd
+                node6x = nodes[i+1][j+1][k+1].x - dt2 * nodes[i+1][j+1][k+1].xd
+                node6y = nodes[i+1][j+1][k+1].y - dt2 * nodes[i+1][j+1][k+1].yd
+                node6z = nodes[i+1][j+1][k+1].z - dt2 * nodes[i+1][j+1][k+1].zd
+                node7x = nodes[i][j+1][k+1].x - dt2 * nodes[i][j+1][k+1].xd
+                node7y = nodes[i][j+1][k+1].y - dt2 * nodes[i][j+1][k+1].yd
+                node7z = nodes[i][j+1][k+1].z - dt2 * nodes[i][j+1][k+1].zd
+                              
+                //calcElemShapeFunctionDerivatives
+                elements[i][j][k] = calcElemShapeFunctionDerivatives(elements[i][j][k],\
+                                    nodes[i][j][k].x - dt2 * nodes[i][j][k].xd, node1x, node2x, node3x, node4x, node5x, node6x, node7x,\
+                                     nodes[i][j][k].y - dt2 * nodes[i][j][k].yd, node1y, node2y, node3y, node4y, node5y, node6y, node7y,\
+                                     nodes[i][j][k].z - dt2 * nodes[i][j][k].zd, node1z, node2z, node3z, node4z, node5z, node6z, node7z)
+                
+              //calcElemVelocityGrandient
+              inv_detJ = 1 / elements[i][j][k].determ
+              
+              elements[i][j][k].d[0] = inv_detJ * (\
+                                                   elements[i][j][k].normalX[0][0][0] * (nodes[i][j][k].xd-nodes[i+1][j+1][k+1].xd)\
+                                                   + elements[i][j][k].normalX[1][0][0] * (nodes[i+1][j][k].xd-nodes[i][j+1][k+1].xd)\
+                                                   + elements[i][j][k].normalX[1][1][0] * (nodes[i+1][j+1][k].xd-nodes[i][j][k+1].xd)\
+                                                   + elements[i][j][k].normalX[0][1][0] * (nodes[i][j+1][k].xd-nodes[i+1][j][k+1].xd)\
+                                                   )
+              elements[i][j][k].d[1] = inv_detJ * (\
+                                                   elements[i][j][k].normalY[0][0][0] * (nodes[i][j][k].yd-nodes[i+1][j+1][k+1].yd)\
+                                                   + elements[i][j][k].normalY[1][0][0] * (nodes[i+1][j][k].yd-nodes[i][j+1][k+1].yd)\
+                                                   + elements[i][j][k].normalY[1][1][0] * (nodes[i+1][j+1][k].yd-nodes[i][j][k+1].yd)\
+                                                   + elements[i][j][k].normalY[0][1][0] * (nodes[i][j+1][k].yd-nodes[i+1][j][k+1].yd)\
+                                                   )
+              elements[i][j][k].d[2] = inv_detJ * (\
+                                                   elements[i][j][k].normalZ[0][0][0] * (nodes[i][j][k].zd-nodes[i+1][j+1][k+1].zd)\
+                                                   + elements[i][j][k].normalZ[1][0][0] * (nodes[i+1][j][k].zd-nodes[i][j+1][k+1].zd)\
+                                                   + elements[i][j][k].normalZ[1][1][0] * (nodes[i+1][j+1][k].zd-nodes[i][j][k+1].zd)\
+                                                   + elements[i][j][k].normalZ[0][1][0] * (nodes[i][j+1][k].zd-nodes[i+1][j][k+1].zd)\
+                                                   )
+              
+              dyddx = inv_detJ * (\
+                                  elements[i][j][k].normalX[0][0][0] * (nodes[i][j][k].yd-nodes[i+1][j+1][k+1].yd)\
+                                  + elements[i][j][k].normalX[1][0][0] * (nodes[i+1][j][k].yd-nodes[i][j+1][k+1].yd)\
+                                  + elements[i][j][k].normalX[1][1][0] * (nodes[i+1][j+1][k].yd-nodes[i][j][k+1].yd)\
+                                  + elements[i][j][k].normalX[0][1][0] * (nodes[i][j+1][k].yd-nodes[i+1][j][k+1].yd)\
+                                  )
+              dxddy = inv_detJ * (\
+                                  elements[i][j][k].normalY[0][0][0] * (nodes[i][j][k].xd-nodes[i+1][j+1][k+1].xd)\
+                                  + elements[i][j][k].normalY[1][0][0] * (nodes[i+1][j][k].xd-nodes[i][j+1][k+1].xd)\
+                                  + elements[i][j][k].normalY[1][1][0] * (nodes[i+1][j+1][k].xd-nodes[i][j][k+1].xd)\
+                                  + elements[i][j][k].normalY[0][1][0] * (nodes[i][j+1][k].xd-nodes[i+1][j][k+1].xd)\
+                                  )
+              dzddx = inv_detJ * (\
+                                  elements[i][j][k].normalX[0][0][0] * (nodes[i][j][k].zd-nodes[i+1][j+1][k+1].zd)\
+                                  + elements[i][j][k].normalX[1][0][0] * (nodes[i+1][j][k].zd-nodes[i][j+1][k+1].zd)\
+                                  + elements[i][j][k].normalX[1][1][0] * (nodes[i+1][j+1][k].zd-nodes[i][j][k+1].zd)\
+                                  + elements[i][j][k].normalX[0][1][0] * (nodes[i][j+1][k].zd-nodes[i+1][j][k+1].zd)\
+                                  )
+              dxddz = inv_detJ * (\
+                                  elements[i][j][k].normalZ[0][0][0] * (nodes[i][j][k].xd-nodes[i+1][j+1][k+1].xd)\
+                                  + elements[i][j][k].normalZ[1][0][0] * (nodes[i+1][j][k].xd-nodes[i][j+1][k+1].xd)\
+                                  + elements[i][j][k].normalZ[1][1][0] * (nodes[i+1][j+1][k].xd-nodes[i][j][k+1].xd)\
+                                  + elements[i][j][k].normalZ[0][1][0] * (nodes[i][j+1][k].xd-nodes[i+1][j][k+1].xd)\
+                                  )
+              dzddy = inv_detJ * (\
+                                  elements[i][j][k].normalY[0][0][0] * (nodes[i][j][k].zd-nodes[i+1][j+1][k+1].zd)\
+                                  + elements[i][j][k].normalY[1][0][0] * (nodes[i+1][j][k].zd-nodes[i][j+1][k+1].zd)\
+                                  + elements[i][j][k].normalY[1][1][0] * (nodes[i+1][j+1][k].zd-nodes[i][j][k+1].zd)\
+                                  + elements[i][j][k].normalY[0][1][0] * (nodes[i][j+1][k].zd-nodes[i+1][j][k+1].zd)\
+                                  )
+              dyddz = inv_detJ * (\
+                                  elements[i][j][k].normalZ[0][0][0] * (nodes[i][j][k].yd-nodes[i+1][j+1][k+1].yd)\
+                                  + elements[i][j][k].normalZ[1][0][0] * (nodes[i+1][j][k].yd-nodes[i][j+1][k+1].yd)\
+                                  + elements[i][j][k].normalZ[1][1][0] * (nodes[i+1][j+1][k].yd-nodes[i][j][k+1].yd)\
+                                  + elements[i][j][k].normalZ[0][1][0] * (nodes[i][j+1][k].yd-nodes[i+1][j][k+1].yd)\
+                                  )
+              elements[i][j][k].d[5] = 0.5 * ( dxddy + dyddx )
+              elements[i][j][k].d[4] = 0.5 * ( dxddz + dzddx )
+              elements[i][j][k].d[3] = 0.5 * ( dzddy + dyddz )
+              
+              elements[i][j][k].dxx = elements[i][j][k].d[0]
+              elements[i][j][k].dyy = elements[i][j][k].d[1]
+              elements[i][j][k].dzz = elements[i][j][k].d[2]
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+                
+            do{
+                vdov = elements[i][j][k].dxx + elements[i][j][k].dyy + elements[i][j][k].dzz
+                
+                elements[i][j][k].vdov = vdov
+                elements[i][j][k].dxx = elements[i][j][k].dxx - vdov / 3.0
+                elements[i][j][k].dyy = elements[i][j][k].dyy - vdov / 3.0
+                elements[i][j][k].dzz = elements[i][j][k].dzz - vdov / 3.0
+                
+                //if (mesh.vnew(k) <= Real_t(0.0))
+                //{
+                //    exit(VolumeError) ;
+                //}
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+                
+            //calcQForElems
+                
+            //calcMonotonicQGradientsForElems
+            ptiny = 0.000000000000000000000000000000000001//1.e-36
+            do{
+                
+                vol = elements[i][j][k].volo * elements[i][j][k].vnew
+                norm = 1 / (vol + ptiny)
+                
+                dxj = (0-0.25) * ((nodes[i][j][k].x + nodes[i+1][j][k].x + nodes[i+1][j][k+1].x + nodes[i][j][k+1].x) - \
+                                  (nodes[i+1][j+1][k].x + nodes[i][j+1][k].x + nodes[i][j+1][k+1].x + nodes[i+1][j+1][k+1].x))
+                dyj = (0-0.25) * ((nodes[i][j][k].y + nodes[i+1][j][k].y + nodes[i+1][j][k+1].y + nodes[i][j][k+1].y) - \
+                                  (nodes[i+1][j+1][k].y + nodes[i][j+1][k].y + nodes[i][j+1][k+1].y + nodes[i+1][j+1][k+1].y))
+                dzj = (0-0.25) * ((nodes[i][j][k].z + nodes[i+1][j][k].z + nodes[i+1][j][k+1].z + nodes[i][j][k+1].z) - \
+                                  (nodes[i+1][j+1][k].z + nodes[i][j+1][k].z + nodes[i][j+1][k+1].z + nodes[i+1][j+1][k+1].z))
+                
+                dxi = (0.25) * ((nodes[i+1][j][k].x + nodes[i+1][j+1][k].x + nodes[i+1][j+1][k+1].x + nodes[i+1][j][k+1].x) - \
+                                (nodes[i][j+1][k].x + nodes[i][j][k].x + nodes[i][j][k+1].x + nodes[i][j+1][k+1].x))
+                dyi = (0.25) * ((nodes[i+1][j][k].y + nodes[i+1][j+1][k].y + nodes[i+1][j+1][k+1].y + nodes[i+1][j][k+1].y) - \
+                                (nodes[i][j+1][k].y + nodes[i][j][k].y + nodes[i][j][k+1].y + nodes[i][j+1][k+1].y))
+                dzi = (0.25) * ((nodes[i+1][j][k].z + nodes[i+1][j+1][k].z + nodes[i+1][j+1][k+1].z + nodes[i+1][j][k+1].z) - \
+                                (nodes[i][j+1][k].z + nodes[i][j][k].z + nodes[i][j][k+1].z + nodes[i][j+1][k+1].z))
+                
+                dxk = (0.25) * ((nodes[i][j][k].x + nodes[i+1][j][k].x + nodes[i+1][j+1][k].x + nodes[i][j+1][k].x) - \
+                                (nodes[i][j][k+1].x + nodes[i+1][j][k+1].x + nodes[i+1][j+1][k+1].x + nodes[i][j+1][k+1].x))
+                dyk = (0.25) * ((nodes[i][j][k].y + nodes[i+1][j][k].y + nodes[i+1][j+1][k].y + nodes[i][j+1][k].y) - \
+                                (nodes[i][j][k+1].y + nodes[i+1][j][k+1].y + nodes[i+1][j+1][k+1].y + nodes[i][j+1][k+1].y))
+                dzk = (0.25) * ((nodes[i][j][k].z + nodes[i+1][j][k].z + nodes[i+1][j+1][k].z + nodes[i][j+1][k].z) - \
+                                (nodes[i][j][k+1].z + nodes[i+1][j][k+1].z + nodes[i+1][j+1][k+1].z + nodes[i][j+1][k+1].z))
+                
+                ax = dyi*dzj - dzi*dyj
+                ay = dzi*dxj - dxi*dzj
+                az = dxi*dyj - dyi*dxj
+                sqrttmp = double_type_init
+                
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        sqrttmp = sqrt(ax*ax + ay*ay + az*az + ptiny);
+                    }$
+                }
+                
+                elements[i][j][k].delx_zeta = vol / sqrttmp
+                
+                ax = ax * norm
+                ay = ay * norm
+                az = az * norm
+                
+                dxv = (0.25) * ((nodes[i][j][k].xd + nodes[i+1][j][k].xd + nodes[i+1][j+1][k].xd + nodes[i][j+1][k].xd) - \
+                                (nodes[i][j][k+1].xd + nodes[i+1][j][k+1].xd + nodes[i+1][j+1][k+1].xd + nodes[i][j+1][k+1].xd))
+                dyv = (0.25) * ((nodes[i][j][k].yd + nodes[i+1][j][k].yd + nodes[i+1][j+1][k].yd + nodes[i][j+1][k].yd) - \
+                                (nodes[i][j][k+1].yd + nodes[i+1][j][k+1].yd + nodes[i+1][j+1][k+1].yd + nodes[i][j+1][k+1].yd))
+                dzv = (0.25) * ((nodes[i][j][k].zd + nodes[i+1][j][k].zd + nodes[i+1][j+1][k].zd + nodes[i][j+1][k].zd) - \
+                                (nodes[i][j][k+1].zd + nodes[i+1][j][k+1].zd + nodes[i+1][j+1][k+1].zd + nodes[i][j+1][k+1].zd))
+                
+                elements[i][j][k].delv_zeta = ax*dxv + ay*dyv + az*dzv
+                
+                ax = dyj*dzk - dzj*dyk
+                ay = dzj*dxk - dxj*dzk
+                az = dxj*dyk - dyj*dxk
+                
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        sqrttmp = sqrt(ax*ax + ay*ay + az*az + ptiny);
+                    }$
+                }
+                
+                elements[i][j][k].delx_xi = vol / sqrttmp
+                
+                ax = ax * norm
+                ay = ay * norm
+                az = az * norm
+                
+                dxv = (0.25) * ((nodes[i+1][j][k].xd + nodes[i+1][j+1][k].xd + nodes[i+1][j+1][k+1].xd + nodes[i+1][j][k+1].xd) - \
+                                (nodes[i][j+1][k].xd + nodes[i][j][k].xd + nodes[i][j][k+1].xd + nodes[i][j+1][k+1].xd))
+                dyv = (0.25) * ((nodes[i+1][j][k].yd + nodes[i+1][j+1][k].yd + nodes[i+1][j+1][k+1].yd + nodes[i+1][j][k+1].yd) - \
+                                (nodes[i][j+1][k].yd + nodes[i][j][k].yd + nodes[i][j][k+1].yd + nodes[i][j+1][k+1].yd))
+                dzv = (0.25) * ((nodes[i+1][j][k].zd + nodes[i+1][j+1][k].zd + nodes[i+1][j+1][k+1].zd + nodes[i+1][j][k+1].zd) - \
+                                (nodes[i][j+1][k].zd + nodes[i][j][k].zd + nodes[i][j][k+1].zd + nodes[i][j+1][k+1].zd))
+                
+                elements[i][j][k].delv_xi = ax*dxv + ay*dyv + az*dzv
+                
+                ax = dyk*dzi - dzk*dyi
+                ay = dzk*dxi - dxk*dzi
+                az = dxk*dyi - dyk*dxi
+                
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        sqrttmp = sqrt(ax*ax + ay*ay + az*az + ptiny);
+                    }$
+                }
+                
+                elements[i][j][k].delx_eta = vol / sqrttmp
+                
+                ax = ax * norm
+                ay = ay * norm
+                az = az * norm
+                
+                dxv = (0-0.25) * ((nodes[i][j][k].xd + nodes[i+1][j][k].xd + nodes[i+1][j][k+1].xd + nodes[i][j][k+1].xd) - \
+                                  (nodes[i+1][j+1][k].xd + nodes[i][j+1][k].xd + nodes[i][j+1][k+1].xd + nodes[i+1][j+1][k+1].xd))
+                dyv = (0-0.25) * ((nodes[i][j][k].yd + nodes[i+1][j][k].yd + nodes[i+1][j][k+1].yd + nodes[i][j][k+1].yd) - \
+                                  (nodes[i+1][j+1][k].yd + nodes[i][j+1][k].yd + nodes[i][j+1][k+1].yd + nodes[i+1][j+1][k+1].yd))
+                dzv = (0-0.25) * ((nodes[i][j][k].zd + nodes[i+1][j][k].zd + nodes[i+1][j][k+1].zd + nodes[i][j][k+1].zd) - \
+                                  (nodes[i+1][j+1][k].zd + nodes[i][j+1][k].zd + nodes[i][j+1][k+1].zd + nodes[i+1][j+1][k+1].zd))
+                
+                elements[i][j][k].delv_eta = ax*dxv + ay*dyv + az*dzv
+                
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+            
+            do{
+                dels[i][j][k].vdov = elements[i][j][k].vdov
+                dels[i][j][k].volo = elements[i][j][k].volo
+                dels[i][j][k].mass = elements[i][j][k].mass
+                dels[i][j][k].vnew = elements[i][j][k].vnew
+                dels[i][j][k].delx_zeta = elements[i][j][k].delx_zeta
+                dels[i][j][k].delv_zeta = elements[i][j][k].delv_zeta
+                dels[i][j][k].delx_xi = elements[i][j][k].delx_xi
+                dels[i][j][k].delv_xi = elements[i][j][k].delv_xi
+                dels[i][j][k].delx_eta = elements[i][j][k].delx_eta
+                dels[i][j][k].delv_eta = elements[i][j][k].delv_eta
+            }for i, j, k in dels\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+        }
+
+
+        calcMonotonicQForElems(elements){
+            flat_index_range = [0...element_size*element_size*element_size-1]
+            //calcMonotonicQRegionForElems
+            ptiny = 0.000000000000000000000000000000000001//1.e-36
+            do in sequence{
+                i = element_flat_index_to_index[iT][0]
+                j = element_flat_index_to_index[iT][1]
+                k = element_flat_index_to_index[iT][2]
+    
+                delvm = double_type_init
+                delvp = double_type_init
+                delvm1 = double_type_init
+                delvm2 = double_type_init
+                delvm3 = double_type_init
+                delvp1 = double_type_init
+                delvp2 = double_type_init
+                delvp3 = double_type_init
+                phixi = double_type_init
+                phieta = double_type_init
+                phizeta = double_type_init
+                
+                qlin = double_type_init
+                qquad = double_type_init
+                
+                bcMask = bc[i][j][k]
+                
+                norm = 1 / (dels[i][j][k].delv_xi + ptiny)
+                
+                delvm1 = dels[connectivities[i][j][k].lxim[0]][connectivities[i][j][k].lxim[1]][connectivities[i][j][k].lxim[2]].delv_xi
+                delvm2 = dels[i][j][k].delv_xi
+                delvm3 = 0
+                
+                delvp1 = dels[connectivities[i][j][k].lxip[0]][connectivities[i][j][k].lxip[1]][connectivities[i][j][k].lxip[2]].delv_xi
+                delvp2 = dels[i][j][k].delv_xi
+                delvp3 = 0
+                
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib }
+                    ${
+                        #define XI_M        0x003
+                        #define XI_M_SYMM   0x001
+                        #define XI_M_FREE   0x002
+                        
+                        #define XI_P        0x00c
+                        #define XI_P_SYMM   0x004
+                        #define XI_P_FREE   0x008
+                        
+                        #define ETA_M       0x030
+                        #define ETA_M_SYMM  0x010
+                        #define ETA_M_FREE  0x020
+                        
+                        #define ETA_P       0x0c0
+                        #define ETA_P_SYMM  0x040
+                        #define ETA_P_FREE  0x080
+                        
+                        #define ZETA_M      0x300
+                        #define ZETA_M_SYMM 0x100
+                        #define ZETA_M_FREE 0x200
+                        
+                        #define ZETA_P      0xc00
+                        #define ZETA_P_SYMM 0x400
+                        #define ZETA_P_FREE 0x800
+                        
+                        switch (bcMask & XI_M) {
+                            case 0:         delvm = delvm1 ; break ;
+                            case XI_M_SYMM: delvm = delvm2 ; break ;
+                            case XI_M_FREE: delvm = delvm3 ; break ;
+                            default:        /* ERROR */ ;    break ;
+                        }
+                        switch (bcMask & XI_P) {
+                            case 0:         delvp = delvp1 ; break ;
+                            case XI_P_SYMM: delvp = delvp2 ; break ;
+                            case XI_P_FREE: delvp = delvp3 ; break ;
+                            default:        /* ERROR */ ;    break ;
+                        }
+                    }$
+                }
+                
+                delvm = delvm * norm
+                delvp = delvp * norm
+                
+                phixi = 0.5 * ( delvm + delvp )
+                
+                delvm = delvm * monoq_limiter_mult
+                delvp = delvp * monoq_limiter_mult
+                
+                if ( delvm < phixi ){
+                    phixi = delvm
+                }
+                if ( delvp < phixi ){
+                    phixi = delvp
+                }
+                if ( phixi < 0){
+                    phixi = 0
+                }
+                if ( phixi > monoq_max_slope){
+                    phixi = monoq_max_slope
+                }
+                
+                norm = 1.0 / (dels[i][j][k].delv_eta + ptiny)
+                
+                delvm1 = dels[connectivities[i][j][k].letam[0]][connectivities[i][j][k].letam[1]][connectivities[i][j][k].letam[2]].delv_eta
+                delvm2 = dels[i][j][k].delv_eta
+                delvp1 = dels[connectivities[i][j][k].letap[0]][connectivities[i][j][k].letap[1]][connectivities[i][j][k].letap[2]].delv_eta
+                delvp2 = dels[i][j][k].delv_eta
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib }
+                    ${
+                        switch (bcMask & ETA_M) {
+                            case 0:         delvm = delvm1 ; break ;
+                            case ETA_M_SYMM: delvm = delvm2 ; break ;
+                            case ETA_M_FREE: delvm = delvm3 ; break ;
+                            default:        /* ERROR */ ;    break ;
+                        }
+                        switch (bcMask & ETA_P) {
+                            case 0:         delvp = delvp1 ; break ;
+                            case ETA_P_SYMM: delvp = delvp2 ; break ;
+                            case ETA_P_FREE: delvp = delvp3 ; break ;
+                            default:        /* ERROR */ ;    break ;
+                        }
+                    }$
+                }
+                
+                delvm = delvm * norm
+                delvp = delvp * norm
+                
+                phieta = 0.5 * ( delvm + delvp )
+                
+                delvm = delvm * monoq_limiter_mult
+                delvp = delvp * monoq_limiter_mult
+                
+                if ( delvm < phieta ){
+                    phieta = delvm
+                }
+                if ( delvp < phieta ){
+                    phieta = delvp
+                }
+                if ( phieta < 0){
+                    phieta = 0
+                }
+                if ( phieta > monoq_max_slope){
+                    phieta = monoq_max_slope
+                }
+                
+                norm = 1.0 / ( dels[i][j][k].delv_zeta + ptiny )
+                
+                delvm1 = dels[connectivities[i][j][k].lzetam[0]][connectivities[i][j][k].lzetam[1]][connectivities[i][j][k].lzetam[2]].delv_zeta
+                delvm2 = dels[i][j][k].delv_zeta
+                delvp1 = dels[connectivities[i][j][k].lzetap[0]][connectivities[i][j][k].lzetap[1]][connectivities[i][j][k].lzetap[2]].delv_zeta
+                delvp2 = dels[i][j][k].delv_zeta
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib }
+                    ${
+                        switch (bcMask & ZETA_M) {
+                            case 0:         delvm = delvm1 ; break ;
+                            case ZETA_M_SYMM: delvm = delvm2 ; break ;
+                            case ZETA_M_FREE: delvm = delvm3 ; break ;
+                            default:        /* ERROR */ ;    break ;
+                        }
+                        switch (bcMask & ZETA_P) {
+                            case 0:         delvp = delvp1 ; break ;
+                            case ZETA_P_SYMM: delvp = delvp2 ; break ;
+                            case ZETA_P_FREE: delvp = delvp3 ; break ;
+                            default:        /* ERROR */ ;    break ;
+                        }
+                    }$
+                }
+                
+                delvm = delvm * norm
+                delvp = delvp * norm
+                
+                phizeta = 0.5 * ( delvm + delvp )
+                
+                delvm = delvm * monoq_limiter_mult
+                delvp = delvp * monoq_limiter_mult
+                
+                if ( delvm < phizeta ){
+                    phizeta = delvm
+                }
+                if ( delvp < phizeta ){
+                    phizeta = delvp
+                }
+                if ( phizeta < 0){
+                    phizeta = 0
+                }
+                if ( phizeta > monoq_max_slope){
+                    phizeta = monoq_max_slope
+                }
+                // Remove length scale
+                if ( dels[i][j][k].vdov > 0 )  {
+                    qlin  = 0
+                    qquad = 0
+                }
+                if ( dels[i][j][k].vdov <= 0 )  {
+                    delvxxi   = dels[i][j][k].delv_xi   * dels[i][j][k].delx_xi
+                    delvxeta  = dels[i][j][k].delv_eta  * dels[i][j][k].delx_eta
+                    delvxzeta = dels[i][j][k].delv_zeta * dels[i][j][k].delx_zeta
+                    
+                    if ( delvxxi   > 0 ){
+                        delvxxi = 0
+                    }
+                    if ( delvxeta  > 0 ){
+                        delvxeta = 0
+                    }
+                    if ( delvxzeta > 0 ){
+                        delvxzeta = 0
+                    }
+                    rho = dels[i][j][k].mass / (dels[i][j][k].volo * dels[i][j][k].vnew)
+                    
+                    qlin = 0.0 - qlc_monoq * rho * \
+                    (  delvxxi   * (1.0 - phixi) + \
+                     delvxeta  * (1.0 - phieta) + \
+                     delvxzeta * (1.0 - phizeta)  )
+                    
+                    qquad = qqc_monoq * rho * \
+                    (  delvxxi*delvxxi     * (1.0 - phixi*phixi) + \
+                     delvxeta*delvxeta   * (1.0 - phieta*phieta) + \
+                     delvxzeta*delvxzeta * (1.0 - phizeta*phizeta)  )
+                }
+                
+                dels[i][j][k].qq = qquad
+                dels[i][j][k].ql = qlin
+                
+            }for iT in flat_index_range step 1
+                
+            // Don't allow excessive artificial viscosity
+            //if (numElem != 0) {
+            //    Index_t idx = -1;
+            //    for (Index_t i=0; i<numElem; ++i) {
+            //        if ( mesh.q(i) > qstop ) {
+            //            idx = i ;
+            //            break ;
+            //        }
+            //    }
+            
+            //    if(idx >= 0) {
+            //        exit(QStopError) ;
+            //    }
+            //}
+        }
+
+        lagrangeElements_2(elements){
+            localElementXMax = elements.local.dimension1.range.max
+            localElementYMax = elements.local.dimension2.range.max
+            localElementZMax = elements.local.dimension3.range.max
+            localElementXMin = elements.local.dimension1.range.min
+            localElementYMin = elements.local.dimension2.range.min
+            localElementZMin = elements.local.dimension3.range.min
+            
+            do{
+                elements[i][j][k].qq = dels[i][j][k].qq
+                elements[i][j][k].ql = dels[i][j][k].ql
+            }for i, j, k in dels\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+                
+            //applyMaterialPropertiesForElems
+            do{
+                elements[i][j][k].vnewc = elements[i][j][k].vnew
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+            if(eosvmin != 0){
+                do{
+                    if(elements[i][j][k].vnewc < eosvmin){
+                        elements[i][j][k].vnewc = eosvmin
+                    }
+                }for i, j, k in elements\
+                    and (i >= localElementXMin and i <= localElementXMax )\
+                    and (j >= localElementYMin and j <= localElementYMax )\
+                    and (k >= localElementZMin and k <= localElementZMax )
+            }
+            if(eosvmax != 0){
+                do{
+                    if(elements[i][j][k].vnewc > eosvmax){
+                        elements[i][j][k].vnewc = eosvmax
+                    }
+                }for i, j, k in elements\
+                    and (i >= localElementXMin and i <= localElementXMax )\
+                    and (j >= localElementYMin and j <= localElementYMax )\
+                    and (k >= localElementZMin and k <= localElementZMax )
+            }
+
+            do{
+                vc = elements[i][j][k].v
+                if(eosvmin != 0){
+                    if(vc < eosvmin){
+                        vc = eosvmin
+                    }
+                }
+                if(eosvmax != 0){
+                    if(vc > eosvmax){
+                        vc = eosvmax
+                    }
+                }
+                //if (vc <= 0.) {
+                //    exit(VolumeError) ;
+                //}
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+
+            //evalEOSForElems
+            do{
+                elements[i][j][k].e_old = elements[i][j][k].e
+                elements[i][j][k].delvc = elements[i][j][k].delv
+                elements[i][j][k].p_old = elements[i][j][k].p
+                elements[i][j][k].q_old = elements[i][j][k].q
+                
+                elements[i][j][k].compression = 1.0 / elements[i][j][k].vnewc - 1.0
+                vchalf = elements[i][j][k].vnewc - elements[i][j][k].delvc * 0.5
+                elements[i][j][k].compHalfStep = 1.0 / vchalf - 1.0
+                
+                elements[i][j][k].work = 0
+                
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+            if(eosvmin != 0){
+                do{
+                    if(elements[i][j][k].vnewc <= eosvmin){
+                        elements[i][j][k].compHalfStep = elements[i][j][k].compression
+                    }
+                }for i, j, k in elements\
+                    and (i >= localElementXMin and i <= localElementXMax )\
+                    and (j >= localElementYMin and j <= localElementYMax )\
+                    and (k >= localElementZMin and k <= localElementZMax )
+            }
+            if(eosvmax != 0){
+                do{
+                    if(elements[i][j][k].vnewc >= eosvmax){
+                        elements[i][j][k].p_old = 0
+                        elements[i][j][k].compression = 0
+                        elements[i][j][k].compHalfStep = 0
+                    }
+                }for i, j, k in elements\
+                    and (i >= localElementXMin and i <= localElementXMax )\
+                    and (j >= localElementYMin and j <= localElementYMax )\
+                    and (k >= localElementZMin and k <= localElementZMax )
+            }
+
+            //calcEnergyForElems
+            sixth = double_type_init
+            sixth = 1.0 / 6.0
+            ssc_limiter1etc = double_type_init
+            ssc_limiter1etc = 0.000000000000000000000000000000000000111111//.111111e-36
+            ssc_limiter3etc = double_type_init
+            ssc_limiter3etc = 0.000000000000000000333333//.333333e-18
+
+            do{
+                elements[i][j][k].e = elements[i][j][k].e_old -\
+                0.5 * elements[i][j][k].delvc * (elements[i][j][k].p_old + elements[i][j][k].q_old) +\
+                0.5 * elements[i][j][k].work
+                
+                if(elements[i][j][k].e < emin){
+                    elements[i][j][k].e = emin
+                }
+                
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+
+            do{
+                elements[i][j][k] = calcPressureForElems(double_type_init,\
+                                                         elements[i][j][k].compHalfStep, p_cut, eosvmax, pmin, elements[i][j][k])
+                elements[i][j][k].pHalfStep = elements[i][j][k].p
+                
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+
+            do{
+                vhalf = double_type_init
+                vhalf = 1.0 / (1.0 + elements[i][j][k].compHalfStep)
+                if(elements[i][j][k].delvc > 0){
+                    elements[i][j][k].q = 0
+                }
+                if(elements[i][j][k].delvc <= 0){
+                    ssc = double_type_init
+                    ssc = (elements[i][j][k].pbvc * elements[i][j][k].e\
+                           + vhalf * vhalf * elements[i][j][k].bvc * elements[i][j][k].pHalfStep)\
+                    / refdens
+                    
+                    if(ssc <= ssc_limiter1etc){//.111111e-36
+                        ssc = ssc_limiter3etc//.333333e-18
+                    }
+                    if(ssc > ssc_limiter1etc){
+                        @Extern {
+                            @Language "C++"
+                            @Includes { cstdlib, math.h }
+                            ${
+                                ssc = sqrt(ssc);
+                            }$
+                        }
+                    }
+                    
+                    elements[i][j][k].q = (ssc * elements[i][j][k].ql + elements[i][j][k].qq)
+                }
+                
+                elements[i][j][k].e = elements[i][j][k].e + 0.5 * elements[i][j][k].delvc\
+                * (3.0 * (elements[i][j][k].p_old + elements[i][j][k].q_old)\
+                   - 4.0 * (elements[i][j][k].pHalfStep + elements[i][j][k].q))
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+
+            do{
+                elements[i][j][k].e = elements[i][j][k].e + 0.5 * elements[i][j][k].work
+                
+                fabsTmp = elements[i][j][k].e
+                fabsVal = double_type_init
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        fabsVal = fabs(fabsTmp);
+                    }$
+                }
+                if(fabsVal < e_cut){
+                    elements[i][j][k].e = 0
+                }
+                
+                if(elements[i][j][k].e < emin){
+                    elements[i][j][k].e = emin
+                }
+                
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+
+            do{
+                elements[i][j][k] = calcPressureForElems(double_type_init,\
+                                                         elements[i][j][k].compression, p_cut, eosvmax, pmin, elements[i][j][k])
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+
+            do{
+                q_tilde = double_type_init
+                
+                if (elements[i][j][k].delvc > 0){
+                    q_tilde = 0
+                }
+                if (elements[i][j][k].delvc <= 0){
+                    ssc = double_type_init
+                    ssc = (elements[i][j][k].pbvc * elements[i][j][k].e\
+                           + elements[i][j][k].vnewc * elements[i][j][k].vnewc * elements[i][j][k].bvc * elements[i][j][k].p)\
+                    / refdens
+                    
+                    if(ssc <= ssc_limiter1etc){//.111111e-36
+                        ssc = ssc_limiter3etc//.333333e-18
+                    }
+                    if(ssc > ssc_limiter1etc){
+                        @Extern {
+                            @Language "C++"
+                            @Includes { cstdlib, math.h }
+                            ${
+                                ssc = sqrt(ssc);
+                            }$
+                        }
+                    }
+                    
+                    q_tilde = (ssc * elements[i][j][k].ql + elements[i][j][k].qq)
+                }
+                
+                elements[i][j][k].e = elements[i][j][k].e -\
+                ( 7.0 * (elements[i][j][k].p_old + elements[i][j][k].q_old)\
+                 - 8.0 * (elements[i][j][k].pHalfStep + elements[i][j][k].q)\
+                 + (elements[i][j][k].p + q_tilde)) * elements[i][j][k].delvc * sixth
+                
+                fabsTmp = elements[i][j][k].e
+                fabsVal = double_type_init
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        fabsVal = fabs(fabsTmp);
+                    }$
+                }
+                if(fabsVal < e_cut){
+                    elements[i][j][k].e = 0
+                }
+                
+                if(elements[i][j][k].e < emin){
+                    elements[i][j][k].e = emin
+                }
+                
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+
+            do{
+                elements[i][j][k] = calcPressureForElems(double_type_init,\
+                                                         elements[i][j][k].compression, p_cut, eosvmax, pmin, elements[i][j][k])
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+
+            do{
+                if (elements[i][j][k].delvc <= 0){
+                    ssc = double_type_init
+                    ssc = (elements[i][j][k].pbvc * elements[i][j][k].e\
+                           + elements[i][j][k].vnewc * elements[i][j][k].vnewc * elements[i][j][k].bvc * elements[i][j][k].p)\
+                    / refdens
+                    
+                    if(ssc <= ssc_limiter1etc){//.111111e-36
+                        ssc = ssc_limiter3etc//.333333e-18
+                    }
+                    if(ssc > ssc_limiter1etc){
+                        @Extern {
+                            @Language "C++"
+                            @Includes { cstdlib, math.h }
+                            ${
+                                ssc = sqrt(ssc);
+                            }$
+                        }
+                    }
+                    
+                    elements[i][j][k].q = (ssc * elements[i][j][k].ql + elements[i][j][k].qq)
+                    fabsTmp = elements[i][j][k].q
+                    fabsVal = double_type_init
+                    @Extern {
+                        @Language "C++"
+                        @Includes { cstdlib, math.h }
+                        ${
+                            fabsVal = fabs(fabsTmp);
+                        }$
+                    }
+                    if(fabsVal < q_cut){
+                        elements[i][j][k].q = 0
+                    }
+                    
+                }
+                
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+
+            //calcSoundSpeedForElems
+            do{
+                ssTmp = double_type_init
+                ssTmp = (elements[i][j][k].pbvc * elements[i][j][k].e + \
+                         elements[i][j][k].vnewc * elements[i][j][k].vnewc * elements[i][j][k].bvc * elements[i][j][k].p) /\
+                refdens
+                
+                tmpLimiter1etc = 0.000000000000000000000000000000000000111111//.111111e-36
+                if(ssTmp <= tmpLimiter1etc){
+                    ssTmp = tmpLimiter1etc
+                }
+                
+                sqrttmp = double_type_init
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        sqrttmp = sqrt(ssTmp);
+                    }$
+                }
+                elements[i][j][k].ss = sqrttmp
+
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+
+            //updateVolumesForElems
+            if(element_size != 0){
+                do{
+                    tmpV = elements[i][j][k].vnew
+                    
+                    fabsTmp = double_type_init
+                    fabsTmp = tmpV - 1.0
+                    @Extern {
+                        @Language "C++"
+                        @Includes { cstdlib, math.h }
+                        ${
+                            fabsTmp = fabs(fabsTmp);
+                        }$
+                    }
+                    if(fabsTmp < v_cut){
+                        tmpV = 1.0
+                    }
+                    elements[i][j][k].v = tmpV
+                    
+                }for i, j, k in elements\
+                    and (i >= localElementXMin and i <= localElementXMax )\
+                    and (j >= localElementYMin and j <= localElementYMax )\
+                    and (k >= localElementZMin and k <= localElementZMax )
+            }
+        }
+
+        calcTimeConstraintsForElems_calc(elements, t_cs){
+            
+            localNodeXMin = nodes.local.dimension1.range.min
+            localNodeYMin = nodes.local.dimension2.range.min
+            localNodeZMin = nodes.local.dimension3.range.min
+            localElementXMin = elements.local.dimension1.range.min
+            localElementYMin = elements.local.dimension2.range.min
+            localElementZMin = elements.local.dimension3.range.min
+            
+            localNodeXMax = nodes.local.dimension1.range.max
+            localNodeYMax = nodes.local.dimension2.range.max
+            localNodeZMax = nodes.local.dimension3.range.max
+            localElementXMax = elements.local.dimension1.range.max
+            localElementYMax = elements.local.dimension2.range.max
+            localElementZMax = elements.local.dimension3.range.max
+            
+            if(localNodeXMin > localElementXMin){
+                localElementXMin = localNodeXMin
+            }
+            if(localNodeXMax <= localElementXMax){
+                localElementXMax = localNodeXMax - 1
+            }
+            if(localNodeYMin > localElementYMin){
+                localElementYMin = localNodeYMin
+            }
+            if(localNodeYMax <= localElementYMax){
+                localElementYMax = localNodeYMax - 1
+            }
+            if(localNodeZMin > localElementZMin){
+                localElementZMin = localNodeZMin
+            }
+            if(localNodeZMax <= localElementZMax){
+                localElementZMax = localNodeZMax - 1
+            }
+            do{
+                t_cs[i][j][k].vdov = elements[i][j][k].vdov
+                
+                t_cs[i][j][k].dtf = elements[i][j][k].ss * elements[i][j][k].ss
+                if(elements[i][j][k].vdov < 0){
+                    t_cs[i][j][k].dtf = t_cs[i][j][k].dtf + qqc2 * elements[i][j][k].arealg * elements[i][j][k].arealg\
+                                        * elements[i][j][k].vdov * elements[i][j][k].vdov
+                }
+                sqrtVal = t_cs[i][j][k].dtf
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib, math.h }
+                    ${
+                        sqrtVal = sqrt(sqrtVal);
+                    }$
+                }
+                t_cs[i][j][k].dtf = elements[i][j][k].arealg / sqrtVal
+                //if(elements[i][j][k].vdov != 0){
+                    //reduce(dtcourantT, "min", t_cs[i][j][k].dtf)
+                //}
+                
+                if(elements[i][j][k].vdov != 0){
+                    fabsTmp = elements[i][j][k].vdov
+                    fabsVal = double_type_init
+                    @Extern {
+                        @Language "C++"
+                        @Includes { cstdlib, math.h }
+                        ${
+                            fabsVal = fabs(fabsTmp);
+                        }$
+                    }
+                    t_cs[i][j][k].dtdvov = dvovmax / (fabsVal + 0.00000000000000000001)
+                    //reduce(dthydroT, "min", t_cs[i][j][k].dtdvov)
+                }
+                if(elements[i][j][k].vdov == 0){//Temp
+                    t_cs[i][j][k].dtf = t_cmax
+                    t_cs[i][j][k].dtdvov = t_cmax
+                }
+                
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+        }
+
+
+        calcTimeConstraintsForElems_reduction(dtcourantT, dthydroT, t_cs){
+            localNodeXMin = nodes.local.dimension1.range.min
+            localNodeYMin = nodes.local.dimension2.range.min
+            localNodeZMin = nodes.local.dimension3.range.min
+            localElementXMin = elements.local.dimension1.range.min
+            localElementYMin = elements.local.dimension2.range.min
+            localElementZMin = elements.local.dimension3.range.min
+            
+            localNodeXMax = nodes.local.dimension1.range.max
+            localNodeYMax = nodes.local.dimension2.range.max
+            localNodeZMax = nodes.local.dimension3.range.max
+            localElementXMax = elements.local.dimension1.range.max
+            localElementYMax = elements.local.dimension2.range.max
+            localElementZMax = elements.local.dimension3.range.max
+            
+            if(localNodeXMin > localElementXMin){
+                localElementXMin = localNodeXMin
+            }
+            if(localNodeXMax <= localElementXMax){
+                localElementXMax = localNodeXMax - 1
+            }
+            if(localNodeYMin > localElementYMin){
+                localElementYMin = localNodeYMin
+            }
+            if(localNodeYMax <= localElementYMax){
+                localElementYMax = localNodeYMax - 1
+            }
+            if(localNodeZMin > localElementZMin){
+                localElementZMin = localNodeZMin
+            }
+            if(localNodeZMax <= localElementZMax){
+                localElementZMax = localNodeZMax - 1
+            }
+            do{
+                if(t_cs[i][j][k].vdov != 0){
+                    reduce(dtcourantT, "min", t_cs[i][j][k].dtf)
+                    reduce(dthydroT, "min", t_cs[i][j][k].dtdvov)
+                }
+            }for i, j, k in t_cs\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+        }
+
+
+        timeIncrement(x){
+            if(dtcourantT < t_cmax){
+                dtcourant = dtcourantT
+            }
+            if(dthydroT < t_cmax){
+                dthydro = dthydroT
+            }
+            
+            targetdt = stopTime - time
+            
+            if(dtfixed <= 0 && cycle != 0){
+                ratio = double_type_init
+                olddt = deltaTime
+            }
+            
+            newdt = t_cmax//1.0e+20
+            if(dtcourant < newdt){
+                newdt = dtcourant / 2.0
+            }
+            if(dthydro < newdt){
+                newdt = dthydro * 2.0 / 3.0
+            }
+            
+            ratio = newdt /olddt
+            if(ratio >= 1.0){
+                if (ratio < deltatimemultlb) {
+                    newdt = olddt
+                }
+                if (ratio > deltatimemultu) {//else
+                    newdt = olddt * deltatimemultub
+                }
+            }
+            
+            if(newdt > dtmax){
+                newdt = dtmax
+            }
+            
+            //TRY TO PREVENT VERY SMALL SCALING ON THE NEXT CYCLE
+            if ((targetdt > deltaTime) && (targetdt < (4.0 * deltaTime / 3.0))) {
+                targetdt = 2.0 * deltaTime / 3.0
+            }
+            
+            if (targetdt < deltaTime) {
+                deltaTime = targetdt
+            }
+            
+            time = time + deltaTime
+            
+            cycle = cycle + 1
+        
+            dtcourantT = t_cmax
+            dthydroT = t_cmax
+            dtcourant = t_cmax
+            dthydro = t_cmax
+        }
+
+
+        dumpDataElementInSpaceC(elements){
+            localNodeX = nodes.local.dimension1.range
+            localNodeY = nodes.local.dimension2.range
+            localNodeZ = nodes.local.dimension3.range
+            localNodeMaxX = localNodeX.max
+            localNodeMinX = localNodeX.min
+            localNodeMaxY = localNodeY.max
+            localNodeMinY = localNodeY.min
+            localNodeMaxZ = localNodeZ.max
+            localNodeMinZ = localNodeZ.min
+            
+            localX = elements.local.dimension1.range
+            localY = elements.local.dimension2.range
+            localZ = elements.local.dimension3.range
+            localMaxX = localX.max
+            localMinX = localX.min
+            localMaxY = localY.max
+            localMinY = localY.min
+            localMaxZ = localZ.max
+            localMinZ = localZ.min
+            @Extern {
+                @Language "C++"
+                @Includes { cstdlib }
+                ${
+                    cout << "localMaxX:" << localMaxX << "\t localMinX:" << localMinX << endl;
+                    cout << "localMaxY:" << localMaxY << "\t localMinY:" << localMinY << endl;
+                    cout << "localMaxZ:" << localMaxZ << "\t localMinZ:" << localMinZ << endl;
+                    
+                    cout << "localNodeMaxX:" << localNodeMaxX << "\t localNodeMinX:" << localNodeMinX << endl;
+                    cout << "localNodeMaxY:" << localNodeMaxY << "\t localNodeMinY:" << localNodeMinY << endl;
+                    cout << "localNodeMaxZ:" << localNodeMaxZ << "\t localNodeMinZ:" << localNodeMinZ << endl;
+                }$
+            }
+            
+            localNodeXMin = nodes.local.dimension1.range.min
+            localNodeYMin = nodes.local.dimension2.range.min
+            localNodeZMin = nodes.local.dimension3.range.min
+            localElementXMin = elements.local.dimension1.range.min
+            localElementYMin = elements.local.dimension2.range.min
+            localElementZMin = elements.local.dimension3.range.min
+            
+            localNodeXMax = nodes.local.dimension1.range.max
+            localNodeYMax = nodes.local.dimension2.range.max
+            localNodeZMax = nodes.local.dimension3.range.max
+            localElementXMax = elements.local.dimension1.range.max
+            localElementYMax = elements.local.dimension2.range.max
+            localElementZMax = elements.local.dimension3.range.max
+            
+            if(localNodeXMin > localElementXMin){
+                localElementXMin = localNodeXMin
+            }
+            if(localNodeXMax <= localElementXMax){
+                localElementXMax = localNodeXMax - 1
+            }
+            if(localNodeYMin > localElementYMin){
+                localElementYMin = localNodeYMin
+            }
+            if(localNodeYMax <= localElementYMax){
+                localElementYMax = localNodeYMax - 1
+            }
+            if(localNodeZMin > localElementZMin){
+                localElementZMin = localNodeZMin
+            }
+            if(localNodeZMax <= localElementZMax){
+                localElementZMax = localNodeZMax - 1
+            }
+            do{
+                
+                p = elements[i][j][k].p
+                q = elements[i][j][k].q
+                volo = elements[i][j][k].volo
+                v = elements[i][j][k].v
+                ss = elements[i][j][k].ss
+                vnew = elements[i][j][k].vnew
+                delv = elements[i][j][k].delv
+                arealg = elements[i][j][k].arealg
+                mass = elements[i][j][k].mass
+                dxx = elements[i][j][k].dxx
+                dyy = elements[i][j][k].dyy
+                dzz = elements[i][j][k].dzz
+                vdov = elements[i][j][k].vdov
+                delx_zeta = elements[i][j][k].delx_zeta
+                delv_zeta = elements[i][j][k].delv_zeta
+                delv_xi = elements[i][j][k].delv_xi
+                delx_eta = elements[i][j][k].delx_eta
+                delx_xi = elements[i][j][k].delx_xi
+                delv_eta = elements[i][j][k].delv_eta
+                bcT = bc[i][j][k]
+                qq = elements[i][j][k].qq
+                ql = elements[i][j][k].ql
+                eT = elements[i][j][k].e
+                lxim0 = connectivities[i][j][k].lxim[0]
+                lxim1 = connectivities[i][j][k].lxim[1]
+                lxim2 = connectivities[i][j][k].lxim[2]
+                lxip0 = connectivities[i][j][k].lxip[0]
+                lxip1 = connectivities[i][j][k].lxip[1]
+                lxip2 = connectivities[i][j][k].lxip[2]
+                letam0 = connectivities[i][j][k].letam[0]
+                letam1 = connectivities[i][j][k].letam[1]
+                letam2 = connectivities[i][j][k].letam[2]
+                letap0 = connectivities[i][j][k].letap[0]
+                letap1 = connectivities[i][j][k].letap[1]
+                letap2 = connectivities[i][j][k].letap[2]
+                lzetam0 = connectivities[i][j][k].lzetam[0]
+                lzetam1 = connectivities[i][j][k].lzetam[1]
+                lzetam2 = connectivities[i][j][k].lzetam[2]
+                lzetap0 = connectivities[i][j][k].lzetap[0]
+                lzetap1 = connectivities[i][j][k].lzetap[1]
+                lzetap2 = connectivities[i][j][k].lzetap[2]
+                dtf = t_cs[i][j][k].dtf
+                dtdvov = t_cs[i][j][k].dtdvov
+                
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib }
+                    ${
+                        cout << "element:" << "i:" << i << "\t j:" << j << "\t k:" << k << endl;
+                        //cout << "\t dtf:\t" << dtf << endl;
+                        //cout << "\t dtdvov:\t" << dtdvov << endl;
+                        cout << "\t p:\t" << p << endl;
+                        cout << "\t q:\t" << q << endl;
+                        cout << "\t volo:\t" << volo << endl;
+                        cout << "\t v:\t" << v << endl;
+                        cout << "\t ss:\t" << ss << endl;
+                        cout << "\t vnew:\t" << vnew << endl;
+                        cout << "\t delv:\t" << delv << endl;
+                        cout << "\t arealg:\t" << arealg << endl;
+                        cout << "\t mass:\t" << mass << endl;
+                        cout << "\t vdov:\t" << vdov << endl;
+                        cout << "\t bc:\t" << bcT << endl;
+                        cout << "\t qq:\t" << qq << endl;
+                        cout << "\t ql:\t" << ql << endl;
+                        cout << "\t e:\t" << eT << endl;
+                        cout << "\t dxx:\t" << dxx << "\t dyy:\t" << dyy << "\t dzz:\t" << dzz << endl;
+                        cout << "\t del:\t" << "\t delx_zeta:\t" << delx_zeta << "\t delv_zeta:\t" << delv_zeta << endl;
+                        cout << "\t del:\t" << "\t delx_xi:\t" << delx_xi << "\t delv_xi:\t" << delv_xi << endl;
+                        cout << "\t del:\t" << "\t delx_eta:\t" << delx_eta << "\t delv_eta:\t" << delv_eta << endl;
+                        cout << "\t lxim:\t" << lxim0+lxim1*element_size+lxim2*element_size*element_size << endl;
+                        cout << "\t lxip:\t" << lxip0+lxip1*element_size+lxip2*element_size*element_size << endl;
+                        cout << "\t letam:\t" << letam0+letam1*element_size+letam2*element_size*element_size << endl;
+                        cout << "\t letap:\t" << letap0+letap1*element_size+letap2*element_size*element_size << endl;
+                        cout << "\t lzetam:\t" << lzetam0+lzetam1*element_size+lzetam2*element_size*element_size << endl;
+                        cout << "\t lzetap:\t" << lzetap0+lzetap1*element_size+lzetap2*element_size*element_size << endl;
+                    }$
+                }
+            }for i, j, k in elements\
+                and (i >= localElementXMin and i <= localElementXMax )\
+                and (j >= localElementYMin and j <= localElementYMax )\
+                and (k >= localElementZMin and k <= localElementZMax )
+        }
+
+
+
+        dumpDataNodeInSpaceC(nodes){
+            localNodeXMin = nodes.local.dimension1.range.min
+            localNodeYMin = nodes.local.dimension2.range.min
+            localNodeZMin = nodes.local.dimension3.range.min
+            
+            localNodeXMax = nodes.local.dimension1.range.max
+            localNodeYMax = nodes.local.dimension2.range.max
+            localNodeZMax = nodes.local.dimension3.range.max
+    
+            @Extern {
+                @Language "C++"
+                @Includes { cstdlib }
+                ${
+                    
+                    cout << "localNodeMaxX:" << localNodeXMax << "\t localNodeMinX:" << localNodeXMin << endl;
+                    cout << "localNodeMaxY:" << localNodeYMax << "\t localNodeMinY:" << localNodeYMin << endl;
+                    cout << "localNodeMaxZ:" << localNodeZMax << "\t localNodeMinZ:" << localNodeZMin << endl;
+                }$
+            }
+
+            do{
+                
+                x = nodes[i][j][k].x
+                y = nodes[i][j][k].y
+                z = nodes[i][j][k].z
+                xd = nodes[i][j][k].xd
+                yd = nodes[i][j][k].yd
+                zd = nodes[i][j][k].zd
+                xdd = nodes[i][j][k].xdd
+                ydd = nodes[i][j][k].ydd
+                zdd = nodes[i][j][k].zdd
+                fx = nodes[i][j][k].fx
+                fy = nodes[i][j][k].fy
+                fz = nodes[i][j][k].fz
+                mass = nodes[i][j][k].mass
+                
+                @Extern {
+                    @Language "C++"
+                    @Includes { cstdlib }
+                    ${
+                        cout << "node:" << i << j << k << endl;
+                        cout << "\t coordinates:\t" << "\t x:\t" << x << "\t y:\t" << y << "\t z:\t" << z << endl;
+                        cout << "\t velocity:\t" << "\t xd:\t" << xd << "\t yd:\t" << yd << "\t zd:\t" << zd << endl;
+                        cout << "\t acceleration:\t" << "\t xdd:\t" << xdd << "\t ydd:\t" << ydd << "\t zdd:\t" << zdd << endl;
+                        cout << "\t force:\t" << "\t fx:\t" << fx << "\t fy:\t" << fy << "\t fz:\t" << fz << endl;
+                        cout << "\t mass:\t" << mass << endl;
+                    }$
+                }
+            }for i, j, k in nodes\
+                and (i >= localNodeXMin and i <= localNodeXMax )\
+                and (j >= localNodeYMin and j <= localNodeYMax )\
+                and (k >= localNodeZMin and k <= localNodeZMax )
+        }
+
+
+        dumpDataScalar(x){
+            dtcourantTT = dtcourantT
+            dthydroTT = dthydroT
+            @Extern {
+                @Language "C++"
+                @Includes { cstdlib }
+                ${
+                    cout << "\t dtcourant:\t" << dtcourantTT << "\t dthydro:\t" << dthydroTT << endl;
+                }$
+            }
+        }
+
+
+
+    Computation:
+
+            Space A {
+                init(node_flat_index_to_index, element_flat_index_to_index)
+                initElementConnectivityInformation(elements)
+                Space B {
+                    Space C {
+                        initMesh(nodes, elements)
+                    }
+                }
+                Repeat for iteration_counter in [1...max_iterations]{
+                    //debug
+                    Space B {
+                        Space C {
+                            dumpDataNodeInSpaceC(nodes)
+                        }
+                    }
+                    timeIncrement(1)
+                    Space B {
+                        Space C {
+                            lagrangeNodal_1(nodes, elements)
+                        }
+                    }
+                    Space B {
+                        Space C {
+                            lagrangeNodal_2(nodes)
+                        }
+                    }
+                    Space B {
+                        Space C {
+                            lagrangeElements_1(nodes, elements)
+                        }
+                    }
+                    calcMonotonicQForElems(elements)
+                    Space B {
+                        Space C {
+                            lagrangeElements_2(elements)
+                        }
+                    }
+                    Space B {
+                        Space C {
+                            calcTimeConstraintsForElems_calc(elements, t_cs)
+                        }
+                    }
+                    Space B {
+                        Space C {
+                            calcTimeConstraintsForElems_reduction(Space A: dtcourantT, Space A: dthydroT, t_cs)
+                        }
+                    }
+                }
+                        dumpDataScalar(1)
+                        //dumpDataElementInSpaceC(elements)
+                        //dumpDataNodeInSpaceC(nodes)
+
+            }
+
+
+    Partition (p, spaceB_padding, spaceC_padding):
+        Space A <un-partitioned> {
+            counter_222,
+            counter_4,
+            gamma,
+            element_flat_index_to_index,
+            node_flat_index_to_index,
+            nodes,
+            elements,
+            connectivities,
+            bc,
+            dels,
+            t_cs
+        }
+        Space B <2d> divides Space A partitions {
+            counter_222:replicated, replicated
+            counter_4:replicated, replicated
+            gamma:replicated, replicated
+            element_flat_index_to_index: replicated, replicated
+            node_flat_index_to_index: replicated, replicated
+            nodes:block_count(p, p) padding(spaceB_padding)
+            elements:block_count(p, p) padding(spaceB_padding)
+            output:block_count(p, p) padding(spaceB_padding)
+            t_cs:block_count(p, p) padding(spaceB_padding)
+            dels:replicated, replicated
+            
+        connectivities:replicated, replicated
+        bc:replicated, replicated
+        }
+        Space C <2d> divides Space B partitions {
+            counter_222:replicated, replicated
+            counter_4:replicated, replicated
+            gamma:replicated, replicated
+            element_flat_index_to_index: replicated, replicated
+            node_flat_index_to_index: replicated, replicated
+            nodes:block_count(p, p) padding(spaceC_padding)
+            elements:block_count(p, p) padding(spaceC_padding)
+            output:block_count(p, p) padding(spaceC_padding)
+            t_cs:block_count(p, p) padding(spaceB_padding)
+            dels:replicated, replicated
+            
+        connectivities:replicated, replicated
+        bc:replicated, replicated
+        }
+
